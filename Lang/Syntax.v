@@ -51,13 +51,15 @@ Arguments e_handle {V}.
 
 Arguments h_handler {V}.
 
+Coercion e_ret : value >-> expr.
+
 Definition ret_clause {V : Set} (h : handler V) : expr (inc V) :=
   match h with
   | h_handler ret_clause _ => ret_clause
   end
 .
 
-(* Two kinds of evaluation contexts: inside-out and outside-in.
+(* The two kinds of evaluation contexts are inside-out and outside-in.
    Often it is more natural to work with one of them,
    depending on whether the context is extended at the top or at the bottom. *)
 Inductive io_ctx (V : Set) : Set :=
@@ -93,13 +95,23 @@ Fixpoint oi_plug {V : Set} (c : oi_ctx V) (e : expr V) : expr V :=
   | oi_ctx_hole => e
   | oi_ctx_let c1 e2 => e_let (oi_plug c1 e) e2
   | oi_ctx_handle c1 h => e_handle (oi_plug c1 e) h
-  end
-.
+  end.
+
+Fixpoint io_to_oi_aux {V : Set} (ctx : io_ctx V) (acc : oi_ctx V) : oi_ctx V :=
+  match ctx with
+  | io_ctx_top => acc
+  | io_ctx_let ctx' e2 => io_to_oi_aux ctx' (oi_ctx_let acc e2)
+  | io_ctx_handle ctx' h => io_to_oi_aux ctx' (oi_ctx_handle acc h)
+  end.
+
+Fixpoint io_to_oi {V : Set} (ctx : io_ctx V) : oi_ctx V :=
+  io_to_oi_aux ctx oi_ctx_hole.
 
 Inductive InAssocList {B : Set} : list (string * B) -> string -> B -> Prop :=
-  | in_assoc_list_head (a : string) (b : B) (tail : list (string * B)) : InAssocList (cons (a,b) tail) a b
+  | in_assoc_list_head (a : string) (b : B) (tail : list (string * B))
+      : InAssocList (cons (a,b) tail) a b
   | in_assoc_list_tail (a a' : string) (b b' : B) (tail : list (string * B))
-      (H : InAssocList tail a b) (Ha_not_eq : ~(a = a'))
+      (H : InAssocList tail a b) (Ha_neq : ~(a = a'))
       : InAssocList (cons (a',b') tail) a b
   .
 
@@ -122,13 +134,13 @@ Proof.
 Qed.
 
 Inductive HandlesOp {V : Set} : handler V -> string -> expr (inc (inc V)) -> Prop :=
-  | handles_op : forall
+  | handles_op
       (ret_clause : expr (inc V))
       (op_clauses : list (string * expr (inc (inc V))))
       (l : string)
       (clause : expr (inc (inc V)))
-      (H : InAssocList op_clauses l clause),
-        HandlesOp (h_handler ret_clause op_clauses) l clause
+      (H : InAssocList op_clauses l clause)
+      : HandlesOp (h_handler ret_clause op_clauses) l clause
 .
 
 Lemma handles_op_dec : forall (V:Set) (h:handler V) (l:string),
@@ -169,8 +181,8 @@ Inductive predex {V : Set} : expr V -> Prop :=
       (v : value V)
       (c : oi_ctx V)
       (e_op : expr (inc (inc V)))
-      (H_e_op : HandlesOp h l e_op)
-      (H_ctx : ~OiCtxHandlesOp c l) :
+      (He_op : HandlesOp h l e_op)
+      (Hctx : ~OiCtxHandlesOp c l) :
       predex (e_handle (oi_plug c (e_do l v)) h)
 .
 

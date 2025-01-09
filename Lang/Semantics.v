@@ -1,30 +1,39 @@
 Require Import Lang.Syntax.
+Require Import Coq.Relations.Relation_Operators.
 
 Reserved Notation "e '-->' e'" (at level 40).
 
-Inductive step {V : Set} : expr V -> expr V -> Prop :=
-  | ST_Add (n1 n2 : nat) :
+Inductive red {V : Set} : expr V -> expr V -> Prop :=
+  | red_add (n1 n2 : nat) :
       (e_add (v_nat n1) (v_nat n2)) --> (e_ret (v_nat (n1 + n2)))
-  | ST_App (e : expr (inc V)) (v : value V) :
+  | red_app (e : expr (inc V)) (v : value V) :
       (e_app (v_lam e) v) --> (esubst e v)
-  | ST_Let (v : value V) (e : expr (inc V)) :
+  | red_let (v : value V) (e : expr (inc V)) :
       (e_let (e_ret v) e) --> (esubst e v)
-  | ST_HandleRet (v : value V) (h : handler V) :
+  | red_handle_ret (v : value V) (h : handler V) :
       (e_handle (e_ret v) h) --> (esubst (ret_clause h) v)
-  | ST_HandleDo
+  | red_handle_do
       (h : handler V)
       (l : string)
       (v : value V)
       (ctx : io_ctx V)
       (e_op : expr (inc (inc V)))
-      (H_e_op : HandlesOp h l e_op)
-      (H_ctx : ~IoCtxHandlesOp ctx l) :
+      (He_op : HandlesOp h l e_op)
+      (Hctx : ~IoCtxHandlesOp ctx l) :
       (e_handle (io_plug ctx (e_do l v)) h) -->
       (esubst (esubst e_op (vshift v))
               (v_lam (io_plug (cshift ctx) (e_ret (v_var VZ)))))
-  | ST_Context
+  | red_context
       (c : io_ctx V)
       (e1 e2 : expr V)
-      (Hstep : e1 --> e2) :
+      (Hred : e1 --> e2) :
       io_plug c e1 --> io_plug c e2
-where "e '-->' e'" := (step e e').
+where "e '-->' e'" := (red e e').
+
+Notation "e '-->*' e'" := (clos_refl_trans_1n _ red e e') (at level 40).
+
+Definition nat_refl :
+  (e_ret (@v_nat Empty_set 42)) -->* (e_ret (@v_nat Empty_set 42)).
+Proof.
+  apply rt1n_refl.
+Qed.
