@@ -3,18 +3,16 @@ Export Lang.Syntax.
 
 (* Context Abstract Machine *)
 
-Inductive cam_expr_mode (V : Set) : Set :=
-  cam_expr_state : expr V -> io_ctx V -> cam_expr_mode V
-
-with cam_op_mode (V : Set) : Set :=
-  cam_op_state : io_ctx V -> oi_ctx V -> string -> value V -> cam_op_mode V
+Inductive cam_state (V : Set) : Set :=
+  | cam_expr_mode : expr V -> io_ctx V -> cam_state V
+  | cam_op_mode : io_ctx V -> oi_ctx V -> string -> value V -> cam_state V
 .
 
-Arguments cam_expr_state {V}.
-Arguments cam_op_state {V}.
+Arguments cam_expr_mode {V}.
+Arguments cam_op_mode {V}.
 
-Notation "'⟨' e ',' c '⟩'" := (cam_expr_state e c) (at level 0).
-Notation "'⟨' c ',' c' ',' l ',' v '⟩'" := (cam_op_state c c' l v) (at level 0).
+Notation "'⟨' e ',' c '⟩'" := (cam_expr_mode e c) (at level 0).
+Notation "'⟨' c ',' c' ',' l ',' v '⟩'" := (cam_op_mode c c' l v) (at level 0).
 
 Check Empty_set.
 
