@@ -16,13 +16,13 @@ Inductive red {V : Set} : expr V -> expr V -> Prop :=
       (h : handler V)
       (l : string)
       (v : value V)
-      (ctx : io_ctx V)
+      (ctx : oi_ctx V)
       (e_op : expr (inc (inc V)))
       (He_op : HandlesOp h l e_op)
-      (Hctx : ~IoCtxHandlesOp ctx l) :
-      (e_handle (io_plug ctx (e_do l v)) h) -->
+      (Hctx : ~OiCtxHandlesOp ctx l) :
+      (e_handle (oi_plug ctx (e_do l v)) h) -->
       (esubst (esubst e_op (vshift v))
-              (v_lam (io_plug (cshift ctx) (e_ret (v_var VZ)))))
+              (v_lam (oi_plug (oi_shift ctx) (e_ret (v_var VZ)))))
   | red_context
       (c : io_ctx V)
       (e1 e2 : expr V)

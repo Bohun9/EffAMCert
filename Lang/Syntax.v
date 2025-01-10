@@ -63,7 +63,7 @@ Definition ret_clause {V : Set} (h : handler V) : expr (inc V) :=
    Often it is more natural to work with one of them,
    depending on whether the context is extended at the top or at the bottom. *)
 Inductive io_ctx (V : Set) : Set :=
-  | io_ctx_top   : io_ctx V
+  | io_ctx_top    : io_ctx V
   | io_ctx_let    : io_ctx V -> expr (inc V) -> io_ctx V
   | io_ctx_handle : io_ctx V -> handler V -> io_ctx V
 .
@@ -104,7 +104,7 @@ Fixpoint io_to_oi_aux {V : Set} (ctx : io_ctx V) (acc : oi_ctx V) : oi_ctx V :=
   | io_ctx_handle ctx' h => io_to_oi_aux ctx' (oi_ctx_handle acc h)
   end.
 
-Fixpoint io_to_oi {V : Set} (ctx : io_ctx V) : oi_ctx V :=
+Definition io_to_oi {V : Set} (ctx : io_ctx V) : oi_ctx V :=
   io_to_oi_aux ctx oi_ctx_hole.
 
 Inductive InAssocList {B : Set} : list (string * B) -> string -> B -> Prop :=
@@ -275,11 +275,18 @@ with hmap {A B : Set} (f : A -> B) (h : handler A) : handler B :=
                 (map (fun '(l,e) => (l, emap (liftA (liftA f)) e)) op_clauses)
   end.
 
-Fixpoint cmap {A B : Set} (f : A -> B) (c : io_ctx A) : io_ctx B := 
+Fixpoint io_map {A B : Set} (f : A -> B) (c : io_ctx A) : io_ctx B := 
   match c with
   | io_ctx_top => io_ctx_top
-  | io_ctx_let ctx' e2 => io_ctx_let (cmap f ctx') (emap (liftA f) e2)
-  | io_ctx_handle ctx' h => io_ctx_handle (cmap f ctx') (hmap f h)
+  | io_ctx_let ctx' e2 => io_ctx_let (io_map f ctx') (emap (liftA f) e2)
+  | io_ctx_handle ctx' h => io_ctx_handle (io_map f ctx') (hmap f h)
+  end.
+
+Fixpoint oi_map {A B : Set} (f : A -> B) (c : oi_ctx A) : oi_ctx B := 
+  match c with
+  | oi_ctx_hole => oi_ctx_hole
+  | oi_ctx_let ctx' e2 => oi_ctx_let (oi_map f ctx') (emap (liftA f) e2)
+  | oi_ctx_handle ctx' h => oi_ctx_handle (oi_map f ctx') (hmap f h)
   end.
 
 (** Shifting of expressions (s† operation). This operation shifts expression
@@ -289,8 +296,9 @@ Definition eshift {A : Set} (e : expr A) : expr (inc A) := emap VS e.
 (** Shifting of values *)
 Definition vshift {A : Set} (v : value A) : value (inc A) := vmap VS v.
 
-(** Shifting of values *)
-Definition cshift {A : Set} (c : io_ctx A) : io_ctx (inc A) := cmap VS c.
+(** Shifting of contexts *)
+Definition io_shift {A : Set} (c : io_ctx A) : io_ctx (inc A) := io_map VS c.
+Definition oi_shift {A : Set} (c : oi_ctx A) : oi_ctx (inc A) := oi_map VS c.
 
 (* ========================================================================= *)
 (* Binding, i.e., simultaneous substitution *)

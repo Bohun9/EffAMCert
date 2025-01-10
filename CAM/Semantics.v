@@ -30,31 +30,82 @@ Inductive cam_red {V : Set} : cam_state V -> cam_state V -> Prop :=
       (Hhandle : HandlesOp h l e_op) :
       ⟨io_ctx_handle ctx h, h_ctx, l, v⟩ ==>
       ⟨(esubst (esubst e_op (vshift v))
-               (v_lam (io_plug (cshift ctx) (e_ret (v_var VZ))))), ctx⟩
+               (v_lam (oi_plug (oi_shift h_ctx) (e_ret (v_var VZ))))), ctx⟩
 
 where "k '==>' k'" := (cam_red k k').
 
 Notation "k '==>*' k'" := (clos_refl_trans_1n _ cam_red k k') (at level 40).
 
-Theorem cam_implies_lang : forall (V:Set) (k:cam_state V) (e:expr V) (v v':value V)
-  (c:io_ctx V) (hc:oi_ctx V) (l:string),
+Theorem cam_implies_lang : forall (V:Set) (k:cam_state V) (v:value V),
   k ==>* ⟨v, io_ctx_top⟩ ->
-  (k = ⟨e, c⟩ -> io_plug c e -->* v) /\
-  (k = ⟨c, hc, l, v'⟩ -> ~(OiCtxHandlesOp hc l) -> io_plug c (oi_plug hc (e_do l v)) -->* v)
+  (forall (e:expr V) (c:io_ctx V), k = ⟨e, c⟩ -> io_plug c e -->* v) /\
+  (forall (c:io_ctx V) (hc:oi_ctx V) (l:string) (v':value V),
+    k = ⟨c, hc, l, v'⟩ -> ~(OiCtxHandlesOp hc l) ->
+    io_plug c (oi_plug hc (e_do l v')) -->* v)
 .
 Proof.
   intros.
-  generalize dependent e.
-  generalize dependent c.
-  generalize dependent hc.
-  generalize dependent l.
-  generalize dependent v'.
   remember ⟨v, io_ctx_top⟩ as k'. induction H; subst.
-  - intros. split; intro.
+  - split; intros.
     + injection H as H1 H2; subst. simpl. apply rt1n_refl.
     + discriminate H.
-  - admit.
-Admitted.
+  - inversion H; subst; split; intros; try discriminate;
+    injection H1 as H3 H4; subst;
+    specialize (IHclos_refl_trans_1n eq_refl); (* remove trivial prefix from the IH *)
+    destruct IHclos_refl_trans_1n as [IH1 IH2]. (* IH1 expr mode, IH2 op mode *)
+    (* cam_red_add *)
+    + eapply rt1n_trans.
+      -- apply red_context. apply red_add.
+      -- apply IH1. reflexivity.
+    (* cam_red_app *)
+    + eapply rt1n_trans.
+      -- apply red_context. apply red_app.
+      -- apply IH1; reflexivity.
+    (* cam_red_let *)
+    + assert (Hlet_ctx : io_plug c (e_let e1 e2) = io_plug (io_ctx_let c e2) e1).
+      {  reflexivity. }
+      rewrite Hlet_ctx.
+      apply IH1; reflexivity.
+    (* cam_red_handle *)
+    + assert (Hhandle_ctx : io_plug c (e_handle e h) = io_plug (io_ctx_handle c h) e).
+      { reflexivity. }
+      rewrite Hhandle_ctx.
+      apply IH1; reflexivity.
+    (* cam_red_ret_let *)
+    + eapply rt1n_trans.
+      -- simpl. apply red_context. apply red_let.
+      -- apply IH1; reflexivity.
+    (* cam_red_ret_handle *)
+    + eapply rt1n_trans.
+      -- simpl. apply red_context. apply red_handle_ret.
+      -- apply IH1; reflexivity.
+    (* cam_red_do *)
+    + assert (Hdo_ctx : io_plug c (e_do l v0) = io_plug c (oi_plug oi_ctx_hole (e_do l v0))).
+      { reflexivity. }
+      rewrite Hdo_ctx.
+      apply IH2; try reflexivity.
+      simpl. auto.
+    (* cam_red_op_let *)
+    + assert (Hlet_ctx :
+        io_plug (io_ctx_let ctx e2) (oi_plug hc (e_do l0 v')) =
+        io_plug ctx (oi_plug (oi_ctx_let hc e2) (e_do l0 v'))).
+      { reflexivity. }
+      rewrite Hlet_ctx.
+      apply IH2; try reflexivity.
+      simpl. assumption.
+    (* cam_red_op_handle1 *)
+    + assert (Hhandle_ctx :
+        io_plug (io_ctx_handle ctx h) (oi_plug hc (e_do l0 v')) =
+        io_plug ctx (oi_plug (oi_ctx_handle hc h) (e_do l0 v'))).
+      { reflexivity. }
+      rewrite Hhandle_ctx.
+      apply IH2; try reflexivity.
+      simpl. intros [Habsurd | Habsurd]; auto.
+    (* cam_red_op_handle2 *)
+    + eapply rt1n_trans.
+      -- simpl. apply red_context. apply red_handle_do; eauto.
+      -- apply IH1. reflexivity.
+Qed.
 
 Theorem lang_equiv_cam : forall (V:Set) (e:expr V) (v:value V),
   e -->* v <-> ⟨e, io_ctx_top⟩ ==>* ⟨v, io_ctx_top⟩.
