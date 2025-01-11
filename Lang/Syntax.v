@@ -97,16 +97,6 @@ Fixpoint oi_plug {V : Set} (c : oi_ctx V) (e : expr V) : expr V :=
   | oi_ctx_handle c1 h => e_handle (oi_plug c1 e) h
   end.
 
-Fixpoint io_to_oi_aux {V : Set} (ctx : io_ctx V) (acc : oi_ctx V) : oi_ctx V :=
-  match ctx with
-  | io_ctx_top => acc
-  | io_ctx_let ctx' e2 => io_to_oi_aux ctx' (oi_ctx_let acc e2)
-  | io_ctx_handle ctx' h => io_to_oi_aux ctx' (oi_ctx_handle acc h)
-  end.
-
-Definition io_to_oi {V : Set} (ctx : io_ctx V) : oi_ctx V :=
-  io_to_oi_aux ctx oi_ctx_hole.
-
 Inductive InAssocList {B : Set} : list (string * B) -> string -> B -> Prop :=
   | in_assoc_list_head (a : string) (b : B) (tail : list (string * B))
       : InAssocList (cons (a,b) tail) a b

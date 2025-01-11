@@ -1,5 +1,6 @@
 -R . Top
 ./Lang/Syntax.v
 ./Lang/Semantics.v
+./Lang/ContextProperties.v
 ./CAM/Syntax.v
 ./CAM/Semantics.v
