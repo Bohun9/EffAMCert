@@ -4,3 +4,5 @@
 ./Lang/ContextProperties.v
 ./CAM/Syntax.v
 ./CAM/Semantics.v
+./CAM/Lang_CAM.v
+./CAM/ShapeLemmas.v

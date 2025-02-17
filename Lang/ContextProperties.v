@@ -1,134 +1,352 @@
 Require Import Lang.Syntax.
 
-Fixpoint add_io_io {V : Set} (c1 c2 : io_ctx V) : io_ctx V :=
-  match c2 with
-  | io_ctx_top => c1
-  | io_ctx_let c e2 => io_ctx_let (add_io_io c1 c) e2
-  | io_ctx_handle c h => io_ctx_handle (add_io_io c1 c) h
+(* ===================================================================================== *)
+(* Context addition definitions *)
+
+Fixpoint add_ii {V : Set} (C1 C2 : i_ctx V) : i_ctx V :=
+  match C2 with
+  | i_ctx_top => C1
+  | i_ctx_let C e2 => i_ctx_let (add_ii C1 C) e2
+  | i_ctx_handle C h => i_ctx_handle (add_ii C1 C) h
   end.
 
-Theorem plug_add_io_io : 
-  forall (V:Set) (c1 c2:io_ctx V) (e:expr V),
-    io_plug (add_io_io c1 c2) e = io_plug c1 (io_plug c2 e).
+Fixpoint add_oo {V : Set} (C1 C2 : o_ctx V) : o_ctx V :=
+  match C1 with
+  | o_ctx_hole => C2
+  | o_ctx_let C e2 => o_ctx_let (add_oo C C2) e2
+  | o_ctx_handle C h => o_ctx_handle (add_oo C C2) h
+  end.
+
+Fixpoint add_i {V : Set} (C1 : i_ctx V) (C2 : o_ctx V) : i_ctx V :=
+  match C2 with
+  | o_ctx_hole => C1
+  | o_ctx_let C e2 => add_i (i_ctx_let C1 e2) C
+  | o_ctx_handle C h => add_i (i_ctx_handle C1 h) C
+  end.
+
+Fixpoint add_o {V : Set} (C1 : i_ctx V) (C2 : o_ctx V) : o_ctx V :=
+  match C1 with
+  | i_ctx_top => C2
+  | i_ctx_let C e2 => add_o C (o_ctx_let C2 e2)
+  | i_ctx_handle C h => add_o C (o_ctx_handle C2 h)
+  end.
+
+Notation "C1 'ᵢ+ᵢ' C2" := (add_ii C1 C2) (at level 40).
+Notation "C1 'ₒ+ₒ' C2" := (add_oo C1 C2) (at level 40).
+Notation "C1 '+ᵢ' C2" := (add_i C1 C2) (at level 40).
+Notation "C1 '+ₒ' C2" := (add_o C1 C2) (at level 40).
+
+Definition i_to_o {V : Set} (C : i_ctx V) : o_ctx V :=
+  C +ₒ o_ctx_hole.
+
+Definition o_to_i {V : Set} (C : o_ctx V) : i_ctx V :=
+  i_ctx_top +ᵢ C.
+
+Notation "'toₒ' C" := (i_to_o C) (at level 40).
+Notation "'toᵢ' C" := (o_to_i C) (at level 40).
+
+(* ===================================================================================== *)
+(* Context addition properties *)
+
+
+(* ===================================================================================== *)
+(* Neutral elements of addition *)
+
+Theorem add_ii_top_l :
+  forall (V : Set) (C : i_ctx V),
+    i_ctx_top ᵢ+ᵢ C = C.
 Proof.
-  intros. generalize dependent e. induction c2; intro.
+  intros. induction C.
   - simpl. reflexivity.
-  - simpl. rewrite IHc2. reflexivity.
-  - simpl. rewrite IHc2. reflexivity.
+  - simpl. rewrite IHC. reflexivity.
+  - simpl. rewrite IHC. reflexivity.
 Qed.
 
-Fixpoint add_oi_oi {V : Set} (c1 c2 : oi_ctx V) : oi_ctx V :=
-  match c1 with
-  | oi_ctx_hole => c2
-  | oi_ctx_let c e2 => oi_ctx_let (add_oi_oi c c2) e2
-  | oi_ctx_handle c h => oi_ctx_handle (add_oi_oi c c2) h
-  end.
 
-Lemma add_oi_oi_hole_r :
-  forall (V:Set) (c:oi_ctx V), add_oi_oi c oi_ctx_hole = c.
-Admitted.
+Lemma add_oo_hole_r :
+  forall (V : Set) (C : o_ctx V),
+    C ₒ+ₒ hole = C.
+Proof.
+  intros. induction C.
+  - simpl. reflexivity.
+  - simpl. rewrite IHC. reflexivity.
+  - simpl. rewrite IHC. reflexivity.
+Qed.
 
-Fixpoint add_io_oi {V : Set} (c1 : io_ctx V) (c2 : oi_ctx V) : io_ctx V :=
-  match c2 with
-  | oi_ctx_hole => c1
-  | oi_ctx_let c e2 => add_io_oi (io_ctx_let c1 e2) c
-  | oi_ctx_handle c h => add_io_oi (io_ctx_handle c1 h) c
-  end.
+(* Note that there are no such theorems for add_i and add_o *)
 
-Fixpoint add_io_oi2 {V : Set} (c1 : io_ctx V) (c2 : oi_ctx V) : oi_ctx V :=
-  match c1 with
-  | io_ctx_top => c2
-  | io_ctx_let c e2 => add_io_oi2 c (oi_ctx_let c2 e2)
-  | io_ctx_handle c h => add_io_oi2 c (oi_ctx_handle c2 h)
-  end.
+(* ===================================================================================== *)
+(* Addition associativity with plug *)
 
-Fixpoint io_to_oi_aux {V : Set} (ctx : io_ctx V) (acc : oi_ctx V) : oi_ctx V :=
-  match ctx with
-  | io_ctx_top => acc
-  | io_ctx_let ctx' e2 => io_to_oi_aux ctx' (oi_ctx_let acc e2)
-  | io_ctx_handle ctx' h => io_to_oi_aux ctx' (oi_ctx_handle acc h)
-  end.
+Lemma add_o_plug_assoc :
+  forall (V : Set) (C1 : i_ctx V) (C2 : o_ctx V) e,
+    C1 [ C2[e]ₒ ]ᵢ = (C1 +ₒ C2) [e]ₒ.
+Proof.
+  intros. generalize dependent C2. induction C1; intro.
+  - simpl. reflexivity.
+  - simpl.
+    assert (H : e_let (C2 [e]ₒ) e2 = (o_ctx_let C2 e2) [e]ₒ).
+    { simpl. reflexivity. }
+    rewrite H. apply IHC1.
+  - simpl.
+    assert (H : e_handle (C2 [e]ₒ) h = (o_ctx_handle C2 h) [e]ₒ).
+    { simpl. reflexivity. }
+    rewrite H. apply IHC1.
+Qed.
 
-Definition io_to_oi {V : Set} (ctx : io_ctx V) : oi_ctx V :=
-  io_to_oi_aux ctx oi_ctx_hole.
+Lemma add_i_plug_assoc :
+  forall (V : Set) (C1 : i_ctx V) (C2 : o_ctx V) e,
+    (C1 +ᵢ C2) [e]ᵢ = C1 [ C2[e]ₒ ]ᵢ.
+Proof.
+  intros. generalize dependent C1. induction C2; intro.
+  - simpl. reflexivity.
+  - simpl.
+    assert (H : C1 [e_let (C2 [e ]ₒ) e2 ]ᵢ = i_ctx_let C1 e2 [ C2[e]ₒ ]ᵢ).
+    { simpl. reflexivity. }
+    rewrite H. apply IHC2.
+  - simpl.
+    assert (H : C1 [e_handle (C2 [e ]ₒ) h ]ᵢ = i_ctx_handle C1 h [ C2[e]ₒ ]ᵢ).
+    { simpl. reflexivity. }
+    rewrite H. apply IHC2.
+Qed.
 
-Fixpoint oi_to_io_aux {V : Set} (ctx : oi_ctx V) (acc : io_ctx V) : io_ctx V :=
-  match ctx with
-  | oi_ctx_hole => acc
-  | oi_ctx_let ctx' e2 => oi_to_io_aux ctx' (io_ctx_let acc e2)
-  | oi_ctx_handle ctx' h => oi_to_io_aux ctx' (io_ctx_handle acc h)
-  end.
+Lemma add_oo_plug_assoc :
+  forall (V : Set) (C1 C2 : o_ctx V) e,
+    (C1 ₒ+ₒ C2) [e]ₒ = C1 [ C2[e]ₒ ]ₒ.
+Proof.
+  intros. induction C1.
+  - simpl. reflexivity.
+  - simpl. rewrite IHC1. reflexivity.
+  - simpl. rewrite IHC1. reflexivity.
+Qed.
 
-Definition oi_to_io {V : Set} (ctx : oi_ctx V) : io_ctx V :=
-  oi_to_io_aux ctx io_ctx_top.
+Theorem add_ii_plug_assoc : 
+  forall (V : Set) (C1 C2 : i_ctx V) e,
+    (C1 ᵢ+ᵢ C2) [e]ᵢ = C1 [ C2[e]ᵢ ]ᵢ.
+Proof.
+   intros. generalize dependent e. induction C2; intro.
+  - simpl. reflexivity.
+  - simpl. rewrite IHC2. reflexivity.
+  - simpl. rewrite IHC2. reflexivity.
+Qed.
 
-Lemma io_plug_bijection :
-  forall (V:Set) (c:io_ctx V) (e:expr V),
-    io_plug c e = oi_plug (io_to_oi c) e
-.
-Admitted.
+Lemma i_plug_bijection :
+  forall (V : Set) (C : i_ctx V) e,
+    C[e]ᵢ = (toₒ C) [e]ₒ.
+Proof.
+  intros. unfold i_to_o.
+  rewrite <- add_o_plug_assoc.
+  simpl. reflexivity.
+Qed.
 
-Lemma oi_implies_io :
-  forall (V:Set) (c1 c2:oi_ctx V),
-    c1 = c2 -> oi_to_io c1 = oi_to_io c2.
-Admitted.
+(* Lemma oi_implies_io : *)
+(*   forall (V : Set) (C C' : o_ctx V), *)
+(*     C = C' -> toᵢ C = toᵢ C'. *)
+(* Admitted. *)
 
-Lemma io_bijection_composition :
-  forall (V:Set) (c:io_ctx V),
-    oi_to_io (io_to_oi c) = c.
-Admitted.
+(* ===================================================================================== *)
+(* Addition associativity with addition *)
 
-Lemma bijection_add_oi_oi :
-  forall (V:Set) (c1:io_ctx V) (c2:oi_ctx V),
-    oi_to_io (add_oi_oi (io_to_oi c1) c2) = add_io_oi c1 c2.
-Admitted.
+Lemma add_ii_add_i_assoc :
+  forall (V : Set) (C1 C2 : i_ctx V) (C3 : o_ctx V),
+    (C1 ᵢ+ᵢ C2) +ᵢ C3 = C1 ᵢ+ᵢ (C2 +ᵢ C3).
+Proof.
+  intros. generalize dependent C2. induction C3; intro.
+  - simpl. reflexivity.
+  - simpl.
+    assert (H : i_ctx_let (C1 ᵢ+ᵢ C2) e2 = C1 ᵢ+ᵢ i_ctx_let C2 e2).
+    { simpl. reflexivity. }
+    rewrite H. apply IHC3.
+  - simpl.
+    assert (H : i_ctx_handle (C1 ᵢ+ᵢ C2) h = C1 ᵢ+ᵢ i_ctx_handle C2 h).
+    { simpl. reflexivity. }
+    rewrite H. apply IHC3.
+Qed.
 
-Lemma plug_add_io_oi :
-  forall (V:Set) (c1:io_ctx V) (c2:oi_ctx V) (e:expr V),
-  io_plug (add_io_oi c1 c2) e = io_plug c1 (oi_plug c2 e).
-Admitted.
+Lemma add_ii_add_i_assoc2 :
+  forall (V : Set) (C1 C2 : i_ctx V) (C3 : o_ctx V),
+    (C1 ᵢ+ᵢ C2) +ᵢ C3 = C1 +ᵢ (C2 +ₒ C3).
+Proof.
+  intros. generalize dependent C3. induction C2; intro.
+  - simpl. reflexivity.
+  - simpl.
+    assert (H : i_ctx_let (C1 ᵢ+ᵢ C2) e2 +ᵢ C3 = (C1 ᵢ+ᵢ C2) +ᵢ o_ctx_let C3 e2).
+    { simpl. reflexivity. }
+    rewrite H. apply IHC2.
+  - simpl.
+    assert (H : i_ctx_handle (C1 ᵢ+ᵢ C2) h +ᵢ C3 = (C1 ᵢ+ᵢ C2) +ᵢ o_ctx_handle C3 h).
+    { simpl. reflexivity. }
+    rewrite H. apply IHC2.
+Qed.
 
-Lemma plug_add_oi_oi :
-  forall (V:Set) (c1 c2:oi_ctx V) (e:expr V),
-  oi_plug (add_oi_oi c1 c2) e = oi_plug c1 (oi_plug c2 e).
-Admitted.
+Lemma add_o_add_oo_assoc :
+  forall (V : Set) (C1 : i_ctx V) (C2 C3 : o_ctx V),
+    (C1 +ₒ C2) ₒ+ₒ C3 = C1 +ₒ (C2 ₒ+ₒ C3).
+Proof.
+  intros. generalize dependent C2. induction C1; intro.
+  - simpl. reflexivity.
+  - simpl.
+    assert (H : o_ctx_let (C2 ₒ+ₒ C3) e2 = (o_ctx_let C2 e2) ₒ+ₒ C3).
+    { simpl. reflexivity. }
+    rewrite H. apply IHC1.
+  - simpl.
+    assert (H : o_ctx_handle (C2 ₒ+ₒ C3) h = (o_ctx_handle C2 h) ₒ+ₒ C3).
+    { simpl. reflexivity. }
+    rewrite H. apply IHC1.
+Qed.
 
-Lemma io_plug_injection :
-  forall (V:Set) (c:io_ctx V) (e1 e2:expr V),
-    io_plug c e1 = io_plug c e2 -> e1 = e2.
-Admitted.
+Lemma add_o_add_oo_assoc2 :
+  forall (V : Set) (C1 : i_ctx V) (C2 C3 : o_ctx V),
+    C1 +ₒ (C2 ₒ+ₒ C3) = (C1 +ᵢ C2) +ₒ C3.
+Proof.
+  intros. generalize dependent C1. induction C2; intro.
+  - simpl. reflexivity.
+  - simpl.
+    assert (H : C1 +ₒ o_ctx_let (C2 ₒ+ₒ C3) e2 = (i_ctx_let C1 e2) +ₒ (C2 ₒ+ₒ C3)).
+    { simpl. reflexivity. }
+    rewrite H. apply IHC2.
+  - simpl.
+    assert (H : C1 +ₒ o_ctx_handle (C2 ₒ+ₒ C3) h = (i_ctx_handle C1 h) +ₒ (C2 ₒ+ₒ C3)).
+    { simpl. reflexivity. }
+    rewrite H. apply IHC2.
+Qed.
 
-Lemma oi_plug_injection :
-  forall (V:Set) (c:oi_ctx V) (e1 e2:expr V),
-    oi_plug c e1 = oi_plug c e2 -> e1 = e2.
-Admitted.
+(* Conclusions *)
 
-Lemma oi_ctx_handles_op_add :
-  forall (V:Set) (c1 c2:oi_ctx V) (l:string),
-    OiCtxHandlesOp (add_oi_oi c1 c2) l <-> OiCtxHandlesOp c1 l \/ OiCtxHandlesOp c2 l.
-Admitted.
+Lemma bijection_composition_i :
+  forall (V : Set) (C : i_ctx V),
+    toᵢ (toₒ C) = C.
+Proof.
+  intros. unfold i_to_o. unfold o_to_i.
+  rewrite <- add_ii_add_i_assoc2.
+  rewrite add_ii_top_l.
+  simpl. reflexivity.
+Qed.
 
-Lemma not_oi_ctx_handles_op_add :
-  forall (V:Set) (c1 c2:oi_ctx V) (l:string),
-    ~OiCtxHandlesOp (add_oi_oi c1 c2) l -> ~OiCtxHandlesOp c1 l /\ ~OiCtxHandlesOp c2 l.
-Admitted.
+Lemma bijection_add_oo :
+  forall (V : Set) (C1 : i_ctx V) (C2 : o_ctx V),
+    toᵢ ((toₒ C1) ₒ+ₒ C2) = C1 +ᵢ C2.
+Proof.
+  intros. unfold i_to_o. unfold o_to_i.
+  rewrite add_o_add_oo_assoc. simpl.
+  rewrite <- add_ii_add_i_assoc2.
+  rewrite add_ii_top_l.
+  reflexivity.
+Qed.
 
-Lemma oi_ctx_handles_op_bijection :
-  forall (V:Set) (c:oi_ctx V) (l:string),
-    OiCtxHandlesOp c l -> IoCtxHandlesOp (oi_to_io c) l.
-Admitted.
+Lemma add_ii_eq_add_i :
+  forall (V : Set) (C1 : i_ctx V) (C2 : o_ctx V),
+    C1 ᵢ+ᵢ (toᵢ C2) = C1 +ᵢ C2.
+Proof.
+  intros. unfold o_to_i.
+  rewrite <- add_ii_add_i_assoc.
+  simpl. reflexivity.
+Qed.
 
-Lemma not_oi_ctx_handles_op_bijection :
-  forall (V:Set) (c:oi_ctx V) (l:string),
-    ~OiCtxHandlesOp c l -> ~IoCtxHandlesOp (oi_to_io c) l.
-Admitted.
+Lemma add_o_eq_add_oo :
+  forall (V:Set) (C1 C2 : o_ctx V),
+    (toᵢ C1) +ₒ C2 = C1 ₒ+ₒ C2.
+Proof.
+  intros. unfold o_to_i.
+  rewrite <- add_o_add_oo_assoc2.
+  simpl. reflexivity.
+Qed.
 
-Lemma add_io_io_eq_add_io_oi :
-  forall (V:Set) (c1:io_ctx V) (c2:oi_ctx V),
-    add_io_io c1 (oi_to_io c2) = add_io_oi c1 c2.
-Admitted.
+(* ===================================================================================== *)
+(* Injection of plugs *)
 
-Lemma add_io_oi2_eq_add_oi_oi :
-  forall (V:Set) (c1 c2:oi_ctx V),
-    add_io_oi2 (oi_to_io c1) c2 = add_oi_oi c1 c2.
-Admitted.
+Lemma i_plug_injection :
+  forall (V : Set) (C : i_ctx V) e1 e2,
+    C[e1]ᵢ = C[e2]ᵢ -> e1 = e2.
+Proof.
+  intro V. intro C. induction C; intros; simpl in H.
+  - assumption.
+  - apply IHC in H. injection H as He1. assumption.
+  - apply IHC in H. injection H as He1. assumption.
+Qed.
+
+Lemma o_plug_injection :
+  forall (V : Set) (C : o_ctx V) e1 e2,
+    C[e1]ₒ = C[e2]ₒ -> e1 = e2.
+Proof.
+  intros. induction C; simpl in H.
+  - assumption. 
+  - injection H as He1. apply IHC in He1. assumption.
+  - injection H as He1. apply IHC in He1. assumption.
+Qed.
+
+(* ===================================================================================== *)
+(* Distribution of OctxHandlesOp and IctxHandlesOp *)
+
+Lemma o_ctx_handles_op_add_oo_distr1 :
+  forall (V : Set) (C1 C2 : o_ctx V) l,
+    OctxHandlesOp (C1 ₒ+ₒ C2) l -> OctxHandlesOp C1 l \/ OctxHandlesOp C2 l.
+Proof.
+  intros. induction C1; simpl in H.
+  - right. assumption.
+  - simpl. apply IHC1. assumption.
+  - simpl. destruct H.
+    + left. left. assumption.
+    + apply IHC1 in H.
+      destruct H.
+      * left. right. assumption.
+      * right. assumption.
+Qed.
+
+Lemma o_ctx_handles_op_add_oo_distr2 :
+  forall (V : Set) (C1 C2 : o_ctx V) l,
+    OctxHandlesOp C1 l \/ OctxHandlesOp C2 l -> OctxHandlesOp (C1 ₒ+ₒ C2) l.
+Proof.
+  intros. induction C1.
+  - destruct H.
+    + contradiction.
+    + simpl. assumption.
+  - simpl in H. simpl. apply IHC1. assumption.
+  - simpl in H. simpl.
+    destruct H as [[H1 | H2] | H3].
+    + left. assumption.
+    + right. apply IHC1. left. assumption.
+    + right. apply IHC1. right. assumption.
+Qed.
+
+Lemma not_o_ctx_handles_op_add_oo_distr1 :
+  forall (V : Set) (C1 C2 : o_ctx V) l,
+    ~OctxHandlesOp (C1 ₒ+ₒ C2) l -> ~OctxHandlesOp C1 l /\ ~OctxHandlesOp C2 l.
+Proof.
+  intros. split.
+  - intro HC1. apply H. apply o_ctx_handles_op_add_oo_distr2.
+    left. assumption.
+  - intro HC2. apply H. apply o_ctx_handles_op_add_oo_distr2.
+    right. assumption.
+Qed.
+
+Lemma i_ctx_handles_op_add_i_distr1 :
+  forall (V : Set) (C1 : i_ctx V) (C2 : o_ctx V) l,
+    IctxHandlesOp (C1 +ᵢ C2) l -> IctxHandlesOp C1 l \/ OctxHandlesOp C2 l.
+Proof.
+  intros. generalize dependent C1. induction C2; intro C1.
+  - simpl. intro H. left. assumption.
+  - simpl. intro H. apply IHC2 in H.
+    simpl in H. assumption.
+  - simpl. intro H. apply IHC2 in H. 
+    simpl in H. destruct H as [[H | H] | H]; auto.
+Qed.
+
+Lemma o_ctx_handles_op_bijection :
+  forall (V : Set) (C : o_ctx V) l,
+    IctxHandlesOp (toᵢ C) l -> OctxHandlesOp C l.
+Proof.
+  intros V C l. unfold o_to_i. intro.
+  apply i_ctx_handles_op_add_i_distr1 in H.
+  destruct H.
+  - contradiction.
+  - assumption.
+Qed.
+
+Lemma not_o_ctx_handles_op_bijection :
+  forall (V : Set) (C : o_ctx V) l,
+    ~OctxHandlesOp C l -> ~IctxHandlesOp (toᵢ C) l.
+Proof.
+  intros. intro. apply H.
+  apply o_ctx_handles_op_bijection. assumption.
+Qed.
