@@ -73,6 +73,8 @@ Proof.
   - simpl. rewrite IHC. reflexivity.
 Qed.
 
+Hint Rewrite add_oo_hole_r : core.
+
 (* Note that there are no such theorems for add_i and add_o *)
 
 (* ===================================================================================== *)

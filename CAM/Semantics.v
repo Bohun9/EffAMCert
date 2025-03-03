@@ -58,6 +58,9 @@ where "k '==>' k'" := (cam_red k k').
 
 Notation "k '==>*' k'" := (clos_refl_trans_1n _ cam_red k k') (at level 40).
 
+Hint Constructors cam_red : core.
+Hint Constructors clos_refl_trans_1n : core.
+
 Lemma plug_expr_mode_cam_red : 
   forall (V : Set) (C : i_ctx V) (C' : o_ctx V) e,
     ⟨C'[e]ₒ, C⟩ₑ ==>* ⟨e, C +ᵢ C'⟩ₑ.
@@ -71,6 +74,8 @@ Proof.
     + apply cam_red_handle.
     + apply IHC'.
 Qed.
+
+Hint Resolve plug_expr_mode_cam_red : core.
 
 Lemma not_or_and : forall A B : Prop, ~(A \/ B) -> ~A /\ ~B.
 Proof.
@@ -107,3 +112,5 @@ Proof.
   apply not_o_ctx_handles_op_bijection.
   assumption.
 Qed.
+
+Hint Resolve add_op_mode_cam_red_o : core.
