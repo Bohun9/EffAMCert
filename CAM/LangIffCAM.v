@@ -47,7 +47,7 @@ Proof.
   - specialize (IHclos_refl_trans_1n eq_refl).
     destruct IHclos_refl_trans_1n as [IH1 IH2].
     inversion H; subst; split; intros; try discriminate;
-    injection H1; intros; subst; clear H1; try simplIH.
+    injection H1; intros; subst; clear H1; simplIH.
     + eapply rt1n_trans.
       * apply red_context. apply red_add.
       * apply IH1.
