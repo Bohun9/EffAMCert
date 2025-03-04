@@ -6,6 +6,30 @@ Require Import Lang.ContextProperties.
 Require Import Coq.Relations.Operators_Properties.
 Require Import Coq.Relations.Relation_Operators.
 
+Ltac simplIH :=
+  match goal with
+  | [ _ : _ ==> ⟨?e, ?C⟩ₑ, IH1 : forall (_ : expr _), _, IH2 : forall (_ : i_ctx _), _ |- _] =>
+      clear IH2;
+      let e' := fresh "e" in
+      let C' := fresh "C" in
+      remember e as e' eqn:He;
+      remember C as C' eqn:Hc;
+      specialize (IH1 e' C' eq_refl);
+      subst
+  | [ _ : _ ==> ⟨?C1, ?C2, ?l, ?w⟩ₒ, IH1 : forall (_ : expr _), _, IH2 : forall (_ : i_ctx _), _ |- _] =>
+      clear IH1;
+      let C1' := fresh "C1" in
+      let C2' := fresh "C2" in
+      let l' := fresh "l" in
+      let w' := fresh "w" in
+      remember C1 as C1' eqn:HC1;
+      remember C2 as C2' eqn:HC2;
+      remember l  as l' eqn:Hl;
+      remember w  as w' eqn:Hw;
+      specialize (IH2 C1' C2' l' w' eq_refl);
+      subst
+  end.
+
 Theorem cam_lang :
   forall (V : Set) (s : cam_state V) v,
     s ==>* ⟨v, i_ctx_top⟩ₑ ->
@@ -23,33 +47,25 @@ Proof.
   - specialize (IHclos_refl_trans_1n eq_refl).
     destruct IHclos_refl_trans_1n as [IH1 IH2].
     inversion H; subst; split; intros; try discriminate;
-    injection H1; intros; subst; clear H1.
+    injection H1; intros; subst; clear H1; try simplIH.
     + eapply rt1n_trans.
       * apply red_context. apply red_add.
-      * apply IH1. reflexivity.
+      * apply IH1.
     + eapply rt1n_trans.
       * apply red_context. apply red_app.
-      * apply IH1. reflexivity.
-    + specialize (IH1 e1 (i_ctx_let C0 e2) eq_refl).
-      apply IH1.
-    + specialize (IH1 e (i_ctx_handle C0 h) eq_refl).
-      apply IH1.
+      * apply IH1.
+    + apply IH1.
+    + apply IH1.
     + eapply rt1n_trans.
       * simpl. apply red_context. apply red_let.
-      * apply IH1. reflexivity.
+      * apply IH1.
     + eapply rt1n_trans.
       * simpl. apply red_context. apply red_handle_ret.
-      * apply IH1. reflexivity.
-    + specialize (IH2 C0 o_ctx_hole l v0 eq_refl).
-      apply IH2. auto.
-    + specialize (IH2 C (o_ctx_let C'0 e2) l0 w eq_refl).
-      apply IH2. simpl. assumption.
-    + specialize (IH2 C (o_ctx_handle C'0 h) l0 w eq_refl).
-      apply IH2. simpl. tauto.
-    + specialize (IH1 (esubst (esubst e_op (vshift w))
-                      (v_lam (e_handle (o_ctx_shift C'0 [v_var VZ ]ₒ) (hshift h))))
-                  C eq_refl).
-      simpl. eapply rt1n_trans.
+      * apply IH1.
+    + apply IH2. auto.
+    + apply IH2. simpl. assumption.
+    + apply IH2. simpl. tauto.
+    + simpl. eapply rt1n_trans.
       * apply red_context. apply red_handle_do; try assumption.
         apply HHandlesOp.
       * apply IH1.
