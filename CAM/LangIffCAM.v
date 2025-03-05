@@ -141,3 +141,103 @@ Proof.
   - apply cam_lang in H as [H1 _].
     apply H1 with (C := i_ctx_top). reflexivity.
 Qed.
+
+(* ========================================================================= *)
+(* More general prototype *)
+
+Inductive non_nat {V : Set} : value V -> Prop :=
+  | non_nat_var (v : V) : non_nat (v_var v)
+  | non_nat_lam (e : expr (inc V)) : non_nat (v_lam e).
+
+Inductive lang_nf {V : Set} : expr V -> Prop :=
+  | lang_nf_val (v : value V) : lang_nf v
+  | lang_nf_add1 : forall C v1 v2, non_nat v1 -> lang_nf (C[ e_add v1 v2 ]ᵢ)
+  | lang_nf_add2 : forall C v1 v2, non_nat v2 -> lang_nf (C[ e_add v1 v2 ]ᵢ)
+  (* lang_nf_app *)
+  | lang_nf_do : forall C v l, ~IctxHandlesOp C l -> lang_nf (C[ e_do l v ]ᵢ).
+
+Definition normal_form {A : Set} (R : A -> A -> Prop) (a : A) :=
+  ~exists a', R a a'.
+
+Theorem lang_nf_correct :
+  forall (V : Set) (e : expr V),
+    lang_nf e <-> normal_form red e.
+Abort.
+
+Inductive cam_nf {V : Set} : cam_state V -> Prop :=
+  | cam_nf_val (v : value V) : cam_nf ⟨v, i_ctx_top⟩ₑ
+  | cam_nf_add1 : forall C v1 v2, non_nat v1 -> cam_nf ⟨e_add v1 v2, C⟩ₑ
+  | cam_nf_add2 : forall C v1 v2, non_nat v2 -> cam_nf ⟨e_add v1 v2, C⟩ₑ
+  (* cam_nf_app *)
+  | cam_nf_do : forall C l v, cam_nf ⟨i_ctx_top, C, l, v⟩ₒ.
+
+Theorem cam_nf_correct :
+  forall (V : Set) (s : cam_state V),
+    cam_nf s <-> normal_form cam_red s.
+Abort.
+
+Inductive nf_relation {V : Set} : expr V -> cam_state V -> Prop :=
+  | nf_val (v : value V) : nf_relation v ⟨v, i_ctx_top⟩ₑ
+  | nf_add1 : forall C v1 v2, non_nat v1 ->
+      nf_relation (C [e_add v1 v2]ᵢ) ⟨e_add v1 v2, C⟩ₑ
+  | nf_add2 : forall C v1 v2, non_nat v2 ->
+      nf_relation (C [e_add v1 v2]ᵢ) ⟨e_add v1 v2, C⟩ₑ
+  (* nf_app *)
+  | nf_do : forall C v l, ~IctxHandlesOp C l ->
+      nf_relation (C[ e_do l v ]ᵢ) ⟨i_ctx_top, toₒ C, l, v⟩ₒ.
+
+Theorem lang_cam_nf :
+  forall (V : Set) (e n : expr V),
+    lang_nf n /\ e -->* n ->
+    exists n', nf_relation n n' /\ ⟨e, i_ctx_top⟩ₑ ==>* n'.
+Abort.
+
+Theorem cam_lang_nf :
+  forall (V : Set) (e : expr V) (n : cam_state V),
+    cam_nf n /\ ⟨e, i_ctx_top⟩ₑ ==>* n ->
+    exists n', nf_relation n' n /\ e -->* n'.
+Abort.
+
+CoInductive lang_inf {V : Set} : expr V -> Prop :=
+  | lang_inf_step : forall e1 e2, e1 --> e2 -> lang_inf e2 -> lang_inf e1.
+
+Section lang_inf_coind.
+  Variable V : Set.
+  Variable R : expr V -> Prop.
+  Hypothesis Step : forall (e1 : expr V),
+    R e1 -> exists e2, e1 --> e2 /\ R e2.
+
+  Theorem lang_inf_coind : forall (e : expr V),
+    R e -> lang_inf e.
+  Proof.
+    cofix lang_inf_coind.
+    intros. apply Step in H as [e2 [Hstep He2]].
+    eapply lang_inf_step.
+    - apply Hstep.
+    - apply lang_inf_coind. assumption.
+  Qed.
+End lang_inf_coind.
+
+Print lang_inf_coind.
+
+Definition ω := (v_lam (e_app (v_var VZ) (v_var VZ))) : value Empty_set.
+Definition Ω := e_app ω ω : expr Empty_set.
+
+Lemma omega_inf :
+  lang_inf Ω.
+Proof.
+  apply lang_inf_coind with (R := (fun e => e = Ω)).
+  - intros. subst. exists Ω. intuition.
+    assert (H : Ω = esubst (e_app (v_var VZ) (v_var VZ)) ω).
+    { unfold esubst. simpl. reflexivity. }
+    rewrite H at 2. apply red_app.
+  - reflexivity.
+Qed.
+
+CoInductive cam_inf {V : Set} : cam_state V -> Prop :=
+  | cam_inf_step : forall s1 s2, s1 ==> s2 -> cam_inf s2 -> cam_inf s1.
+
+Theorem lang_iff_cam_inf :
+  forall (V : Set) (e : expr V),
+    lang_inf e <-> cam_inf ⟨e, i_ctx_top⟩ₑ.
+Abort.
