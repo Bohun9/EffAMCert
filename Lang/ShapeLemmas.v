@@ -1,7 +1,7 @@
-Require Import CAM.Syntax.
-Require Import CAM.Semantics.
+Require Import Lang.Syntax.
 Require Import Lang.Semantics.
-Require Import ContextProperties.
+Require Import Lang.ContextProperties.
+Require Import Tactics.General.
 Require Import Coq.Relations.Operators_Properties.
 Require Import Coq.Relations.Relation_Operators.
 
@@ -16,14 +16,76 @@ Proof.
 Qed.
 
 Inductive atomic_expr {V : Set} : expr V -> Prop :=
-  | atomic_add (n1 n2 : nat) :
-      atomic_expr (e_add n1 n2)
-  | atomic_app (e : expr (inc V)) (v : value V) :
-      atomic_expr (e_app (v_lam e) v)
+  | atomic_add (v1 v2 : value V) :
+      atomic_expr (e_add v1 v2)
+  | atomic_app (v1 v2 : value V) :
+      atomic_expr (e_app v1 v2)
   | atomic_do (l : string) (v : value V) :
-      atomic_expr (e_do l v).
+      atomic_expr (e_do l v)
+  | atomic_val (v : value V) :
+      atomic_expr (e_val v).
 
 Hint Constructors atomic_expr : core.
+
+Lemma atomic_eq_plug_o :
+  forall {V : Set} {C : o_ctx V} {a e : expr V},
+    atomic_expr a ->
+    a = C[e]ₒ ->
+    C = o_ctx_hole /\ a = e.
+Proof.
+  intros. destruct C.
+  - simpl in H0. subst. auto.
+  - inv H; discriminate.
+  - inv H; discriminate.
+Qed.
+
+Lemma atomic_eq_plug_i :
+  forall {V : Set} {C : i_ctx V} {a e : expr V},
+    atomic_expr a ->
+    a = C[e]ᵢ ->
+    C = i_ctx_top /\ a = e.
+Proof.
+  intros. generalize dependent e. induction C; intros.
+  - simpl in H0. subst. auto.
+  - simpl in H0. apply IHC in H0 as [? ?]. subst. inv H.
+  - simpl in H0. apply IHC in H0 as [? ?]. subst. inv H.
+Qed.
+
+Lemma plug_atomic_eq_plug_atomic_o :
+  forall {V : Set} {C C' : o_ctx V} {a a' : expr V},
+    atomic_expr a ->
+    atomic_expr a' ->
+    C[a]ₒ = C'[a']ₒ ->
+    C = C' /\ a = a'.
+Proof.
+  intros. generalize dependent C'. induction C.
+  - simpl. intros. apply (atomic_eq_plug_o H) in H1 as [? ?]. subst. auto.
+  - intros. destruct C'.
+    + inv H0; discriminate.
+    + simpl in H1. injection H1 as ? ?. subst.
+      apply IHC in H1 as [? ?]. subst. auto.
+    + inv H0; discriminate.
+  - intros. destruct C'.
+    + inv H0; discriminate.
+    + inv H0; discriminate.
+    + simpl in H1. injection H1 as ? ?. subst.
+      apply IHC in H1 as [? ?]. subst. auto.
+Qed.
+
+Lemma plug_atomic_eq_plug_atomic_i :
+  forall (V : Set) (C C' : i_ctx V) a a',
+    atomic_expr a ->
+    atomic_expr a' ->
+    C[a]ᵢ = C'[a']ᵢ ->
+    C = C' /\ a = a'.
+Proof.
+  intros.
+  repeat rewrite i_plug_bijection in H1.
+  apply (plug_atomic_eq_plug_atomic_o H H0) in H1 as [HC Ha].
+  apply (f_equal o_to_i) in HC.
+  repeat rewrite bijection_composition_i in HC.
+  auto.
+Qed.
 
 Lemma plug_atomic_eq_plug_o :
   forall (V : Set) (C C1 : o_ctx V) a e,

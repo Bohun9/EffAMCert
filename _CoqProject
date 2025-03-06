@@ -1,8 +1,11 @@
 -R . Top
+./Tactics/General.v
 ./Lang/Syntax.v
 ./Lang/Semantics.v
 ./Lang/ContextProperties.v
+./Lang/NormalForm.v
+./Lang/ShapeLemmas.v
 ./CAM/Syntax.v
 ./CAM/Semantics.v
-./CAM/Lang_CAM.v
-./CAM/ShapeLemmas.v
+./CAM/NormalForm.v
+./CAM/LangIffCAM.v

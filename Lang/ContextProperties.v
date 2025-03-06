@@ -311,15 +311,13 @@ Proof.
     + right. apply IHC1. right. assumption.
 Qed.
 
+Hint Resolve o_ctx_handles_op_add_oo_distr2 : core.
+
 Lemma not_o_ctx_handles_op_add_oo_distr1 :
   forall (V : Set) (C1 C2 : o_ctx V) l,
     ~OctxHandlesOp (C1 ₒ+ₒ C2) l -> ~OctxHandlesOp C1 l /\ ~OctxHandlesOp C2 l.
 Proof.
-  intros. split.
-  - intro HC1. apply H. apply o_ctx_handles_op_add_oo_distr2.
-    left. assumption.
-  - intro HC2. apply H. apply o_ctx_handles_op_add_oo_distr2.
-    right. assumption.
+  intros. split; auto.
 Qed.
 
 Lemma i_ctx_handles_op_add_i_distr1 :
@@ -332,6 +330,25 @@ Proof.
     simpl in H. assumption.
   - simpl. intro H. apply IHC2 in H. 
     simpl in H. destruct H as [[H | H] | H]; auto.
+Qed.
+
+Lemma i_ctx_handles_op_add_i_distr2 :
+  forall (V : Set) (C1 : i_ctx V) (C2 : o_ctx V) l,
+    IctxHandlesOp C1 l \/ OctxHandlesOp C2 l -> IctxHandlesOp (C1 +ᵢ C2) l.
+Proof.
+  intros. generalize dependent C1. induction C2; simpl; intros.
+  - tauto.
+  - apply IHC2. simpl. assumption.
+  - apply IHC2. simpl. tauto.
+Qed.
+
+Hint Resolve i_ctx_handles_op_add_i_distr2 : core.
+
+Lemma not_i_ctx_handles_op_add_i_distr1 :
+  forall (V : Set) (C1 : i_ctx V) (C2 : o_ctx V) l,
+    ~IctxHandlesOp (C1 +ᵢ C2) l -> ~IctxHandlesOp C1 l /\ ~OctxHandlesOp C2 l.
+Proof.
+  intros. split; auto.
 Qed.
 
 Lemma o_ctx_handles_op_bijection :

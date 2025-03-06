@@ -1,10 +1,13 @@
 Require Import CAM.Syntax.
 Require Import CAM.Semantics.
-Require Import CAM.ShapeLemmas.
+Require Import CAM.NormalForm.
+Require Import Lang.ShapeLemmas.
 Require Import Lang.Semantics.
 Require Import Lang.ContextProperties.
+Require Import Lang.NormalForm.
 Require Import Coq.Relations.Operators_Properties.
 Require Import Coq.Relations.Relation_Operators.
+Require Import Tactics.General.
 
 Ltac simplIH :=
   match goal with
@@ -70,8 +73,6 @@ Proof.
         apply HHandlesOp.
       * apply IH1.
 Qed.
-
-Ltac inv H := inversion H; subst; clear H.
 
 Ltac rt1n_trans2 := 
   apply clos_rt_rt1n; eapply rt_trans; apply clos_rt1n_rt.
@@ -145,57 +146,16 @@ Qed.
 (* ========================================================================= *)
 (* More general prototype *)
 
-Inductive non_nat {V : Set} : value V -> Prop :=
-  | non_nat_var (v : V) : non_nat (v_var v)
-  | non_nat_lam (e : expr (inc V)) : non_nat (v_lam e).
-
-Inductive lang_nf {V : Set} : expr V -> Prop :=
-  | lang_nf_val (v : value V) : lang_nf v
-  | lang_nf_add1 : forall C v1 v2, non_nat v1 -> lang_nf (C[ e_add v1 v2 ]ᵢ)
-  | lang_nf_add2 : forall C v1 v2, non_nat v2 -> lang_nf (C[ e_add v1 v2 ]ᵢ)
-  (* lang_nf_app *)
-  | lang_nf_do : forall C v l, ~IctxHandlesOp C l -> lang_nf (C[ e_do l v ]ᵢ).
-
-Definition normal_form {A : Set} (R : A -> A -> Prop) (a : A) :=
-  ~exists a', R a a'.
-
-Theorem lang_nf_correct :
-  forall (V : Set) (e : expr V),
-    lang_nf e <-> normal_form red e.
-Abort.
-
-Inductive cam_nf {V : Set} : cam_state V -> Prop :=
-  | cam_nf_val (v : value V) : cam_nf ⟨v, i_ctx_top⟩ₑ
-  | cam_nf_add1 : forall C v1 v2, non_nat v1 -> cam_nf ⟨e_add v1 v2, C⟩ₑ
-  | cam_nf_add2 : forall C v1 v2, non_nat v2 -> cam_nf ⟨e_add v1 v2, C⟩ₑ
-  (* cam_nf_app *)
-  | cam_nf_do : forall C l v, cam_nf ⟨i_ctx_top, C, l, v⟩ₒ.
-
-Theorem cam_nf_correct :
-  forall (V : Set) (s : cam_state V),
-    cam_nf s <-> normal_form cam_red s.
-Abort.
-
-Inductive nf_relation {V : Set} : expr V -> cam_state V -> Prop :=
-  | nf_val (v : value V) : nf_relation v ⟨v, i_ctx_top⟩ₑ
-  | nf_add1 : forall C v1 v2, non_nat v1 ->
-      nf_relation (C [e_add v1 v2]ᵢ) ⟨e_add v1 v2, C⟩ₑ
-  | nf_add2 : forall C v1 v2, non_nat v2 ->
-      nf_relation (C [e_add v1 v2]ᵢ) ⟨e_add v1 v2, C⟩ₑ
-  (* nf_app *)
-  | nf_do : forall C v l, ~IctxHandlesOp C l ->
-      nf_relation (C[ e_do l v ]ᵢ) ⟨i_ctx_top, toₒ C, l, v⟩ₒ.
-
 Theorem lang_cam_nf :
   forall (V : Set) (e n : expr V),
     lang_nf n /\ e -->* n ->
-    exists n', nf_relation n n' /\ ⟨e, i_ctx_top⟩ₑ ==>* n'.
+    exists n', nf_rel_lang_cam n n' /\ ⟨e, i_ctx_top⟩ₑ ==>* n'.
 Abort.
 
 Theorem cam_lang_nf :
   forall (V : Set) (e : expr V) (n : cam_state V),
     cam_nf n /\ ⟨e, i_ctx_top⟩ₑ ==>* n ->
-    exists n', nf_relation n' n /\ e -->* n'.
+    exists n', nf_rel_lang_cam n' n /\ e -->* n'.
 Abort.
 
 CoInductive lang_inf {V : Set} : expr V -> Prop :=
