@@ -239,6 +239,16 @@ Proof.
   simpl. reflexivity.
 Qed.
 
+Lemma bijection_composition_o :
+  forall (V : Set) (C : o_ctx V),
+    toₒ (toᵢ C) = C.
+Proof.
+  intros. unfold i_to_o. unfold o_to_i.
+  rewrite <- add_o_add_oo_assoc2.
+  rewrite add_oo_hole_r.
+  reflexivity.
+Qed.
+
 Lemma bijection_add_oo :
   forall (V : Set) (C1 : i_ctx V) (C2 : o_ctx V),
     toᵢ ((toₒ C1) ₒ+ₒ C2) = C1 +ᵢ C2.
