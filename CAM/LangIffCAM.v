@@ -198,35 +198,42 @@ Qed.
 (* ========================================================================= *)
 (* More general prototype *)
 
-CoInductive lang_inf {V : Set} : expr V -> Prop :=
-  | lang_inf_step : forall e1 e2, e1 --> e2 -> lang_inf e2 -> lang_inf e1.
+CoInductive diverges {A : Set} (E : A -> A -> Prop) : A -> Prop :=
+  | diverges_step : forall a1 a2, E a1 a2 -> diverges E a2 -> diverges E a1.
 
-Section lang_inf_coind.
-  Variable V : Set.
-  Variable R : expr V -> Prop.
-  Hypothesis Step : forall (e1 : expr V),
-    R e1 -> exists e2, e1 --> e2 /\ R e2.
+Section diverges_coind.
+  Variable A : Set.
+  Variable E : A -> A -> Prop.
+  Variable R : A -> Prop.
+  Hypothesis Step : forall a, R a -> exists a', E a a' /\ R a'.
 
-  Theorem lang_inf_coind : forall (e : expr V),
-    R e -> lang_inf e.
+  Theorem diverges_coind : forall a, R a -> diverges E a.
   Proof.
     cofix lang_inf_coind.
-    intros. apply Step in H as [e2 [Hstep He2]].
-    eapply lang_inf_step.
+    intros. apply Step in H as [a' [Hstep Ha']].
+    eapply diverges_step.
     - apply Hstep.
     - apply lang_inf_coind. assumption.
   Qed.
-End lang_inf_coind.
+End diverges_coind.
 
-Print lang_inf_coind.
+Theorem diverges_coind' : forall (A : Set) (E : A -> A -> Prop) (a : A),
+  diverges E a -> exists (R : A -> Prop),
+  R a /\ forall a, R a -> exists a', E a a' /\ R a'.
+Proof.
+  intros. exists (diverges E). intuition.
+  inversion H0; subst. exists a2. auto.
+Qed.
+
+Print diverges_coind.
 
 Definition ω := (v_lam (e_app (v_var VZ) (v_var VZ))) : value Empty_set.
 Definition Ω := e_app ω ω : expr Empty_set.
 
 Lemma omega_inf :
-  lang_inf Ω.
+  diverges red Ω.
 Proof.
-  apply lang_inf_coind with (R := (fun e => e = Ω)).
+  apply diverges_coind with (R := (fun e => e = Ω)).
   - intros. subst. exists Ω. intuition.
     assert (H : Ω = esubst (e_app (v_var VZ) (v_var VZ)) ω).
     { unfold esubst. simpl. reflexivity. }
@@ -234,10 +241,7 @@ Proof.
   - reflexivity.
 Qed.
 
-CoInductive cam_inf {V : Set} : cam_state V -> Prop :=
-  | cam_inf_step : forall s1 s2, s1 ==> s2 -> cam_inf s2 -> cam_inf s1.
-
 Theorem lang_iff_cam_inf :
   forall (V : Set) (e : expr V),
-    lang_inf e <-> cam_inf ⟨e, i_ctx_top⟩ₑ.
+    diverges red e <-> diverges cam_red ⟨e, i_ctx_top⟩ₑ.
 Abort.
