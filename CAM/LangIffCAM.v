@@ -93,7 +93,30 @@ Ltac crush_cam_red :=
   | [ |- ⟨ _ +ᵢ _, _, _, _ ⟩ₒ ==>* _ ] => rt1n_trans2; (try apply add_op_mode_cam_red_o)
   end).
 
-Lemma lang_cam_step:
+Lemma lang_cam_base :
+  forall (V : Set) (n : expr V), lang_nf n ->
+    forall C e, n = C[e]ᵢ ->
+    exists n', ⟨e, C⟩ₑ ==>* n' /\ nf_rel_lang_cam n n'.
+Proof.
+  intros; subst. inv H.
+  - apply val_eq_plug in H1 as [? ?]. subst. exists ⟨v, i_ctx_top⟩ₑ. auto.
+  - apply plug_atomic_eq_plug_i in H0 as [C2 [HC0 He]]; auto; subst.
+    exists ⟨e_add v1 v2, C +ᵢ C2⟩ₑ. auto.
+  - apply plug_atomic_eq_plug_i in H0 as [C2 [HC0 He]]; auto; subst.
+    exists ⟨e_add v1 v2, C +ᵢ C2⟩ₑ. auto.
+  - apply plug_atomic_eq_plug_i in H0 as [C2 [HC0 He]]; auto; subst.
+    exists ⟨e_app v1 v2, C +ᵢ C2⟩ₑ. auto.
+  - apply plug_atomic_eq_plug_i in H0 as [C2 [HC0 He]]; auto; subst.
+    exists ⟨i_ctx_top, toₒ (C +ᵢ C2), l, v⟩ₒ. split.
+    + apply not_i_ctx_handles_op_add_i_distr1 in H1 as [HC HC2].
+      crush_cam_red. rewrite <- bijection_composition_i at 1. 
+      unfold o_to_i. crush_cam_red.
+      * apply not_i_ctx_handles_op_bijection. assumption.
+      * rewrite add_oo_eq_add_i. apply rt1n_refl.
+    + auto.
+Qed.
+
+Lemma lang_cam_step :
   forall (V : Set) (C C' : i_ctx V) e r1 r2,
     r1 ~~> r2 ->
     C[e]ᵢ = C'[r1]ᵢ ->
@@ -118,45 +141,50 @@ Proof.
 Qed.
 
 Theorem lang_cam :
-  forall (V : Set) (e : expr V) (v : value V),
-    e -->* v -> 
-    forall (C : i_ctx V) e',
-    e = C[e']ᵢ -> ⟨e', C⟩ₑ ==>* ⟨v, i_ctx_top⟩ₑ.
+  forall (V : Set) (e n : expr V),
+    e -->* n /\ lang_nf n -> 
+    forall C e', e = C[e']ᵢ ->
+    exists n', ⟨e', C⟩ₑ ==>* n' /\ nf_rel_lang_cam n n'.
 Proof.
-  intros V e v multi. remember (e_val v) as e'.
+  intros V e n [multi Hn].
   induction multi as [| e1 e2]; intros; subst.
-  - apply val_eq_plug in H as [H1 H2]. subst. apply rt1n_refl.
+  - eapply lang_cam_base.
+    + apply Hn.
+    + reflexivity.
   - apply red_decomposition in H as [C' [r1 [r2 [HC [He2 Hr]]]]]. subst e2.
     pose (lang_cam_step _ _ _ _ _ _ Hr HC) as Hred.
-    rt1n_trans2.
-    + apply Hred.
-    + apply IHmulti; auto.
+    specialize (IHmulti Hn C' r2 eq_refl) as [n' [IH1 IH2]]. 
+    exists n'. split.
+    + rt1n_trans2.
+      * apply Hred.
+      * apply IH1.
+    + apply IH2.
 Qed.
-
-Theorem lang_iff_cam :
-  forall (V : Set) (e : expr V) (v : value V),
-    e -->* v <-> ⟨e, i_ctx_top⟩ₑ ==>* ⟨v, i_ctx_top⟩ₑ.
-Proof.
-  intros. split; intro.
-  - apply lang_cam with (e := e); auto.
-  - apply cam_lang in H as [H1 _].
-    apply H1 with (C := i_ctx_top). reflexivity.
-Qed.
-
-(* ========================================================================= *)
-(* More general prototype *)
 
 Theorem lang_cam_nf :
   forall (V : Set) (e n : expr V),
-    lang_nf n /\ e -->* n ->
-    exists n', nf_rel_lang_cam n n' /\ ⟨e, i_ctx_top⟩ₑ ==>* n'.
+    e -->* n /\ lang_nf n ->
+    exists n', ⟨e, i_ctx_top⟩ₑ ==>* n' /\ nf_rel_lang_cam n n'.
+Proof.
+  intros. apply lang_cam with (e := e); auto.
+Qed.
+
+Theorem lang_iff_cam_nf :
+  (forall (V : Set) (e n : expr V),
+    e -->* n /\ lang_nf n ->
+    exists n', ⟨e, i_ctx_top⟩ₑ ==>* n' /\ nf_rel_lang_cam n n')
+  /\
+  (forall (V : Set) (e : expr V) (n : cam_state V),
+    ⟨e, i_ctx_top⟩ₑ ==>* n /\ cam_nf n ->
+    exists n', e -->* n' /\ nf_rel_lang_cam n' n).
+Proof.
+  split.
+  - exact lang_cam_nf.
+  - admit.
 Abort.
 
-Theorem cam_lang_nf :
-  forall (V : Set) (e : expr V) (n : cam_state V),
-    cam_nf n /\ ⟨e, i_ctx_top⟩ₑ ==>* n ->
-    exists n', nf_rel_lang_cam n' n /\ e -->* n'.
-Abort.
+(* ========================================================================= *)
+(* More general prototype *)
 
 CoInductive lang_inf {V : Set} : expr V -> Prop :=
   | lang_inf_step : forall e1 e2, e1 --> e2 -> lang_inf e2 -> lang_inf e1.

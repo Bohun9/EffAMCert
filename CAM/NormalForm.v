@@ -11,6 +11,8 @@ Inductive cam_nf {V : Set} : cam_state V -> Prop :=
   | cam_nf_app : forall C v1 v2, non_lam v1  -> cam_nf ⟨e_app v1 v2, C⟩ₑ
   | cam_nf_do : forall C l v, cam_nf ⟨i_ctx_top, C, l, v⟩ₒ.
 
+Hint Constructors cam_nf : core.
+
 Theorem cam_nf_correct :
   forall (V : Set) (s : cam_state V),
     cam_nf s <-> normal_form cam_red s.
@@ -64,6 +66,15 @@ Inductive nf_rel_lang_cam {V : Set} : expr V -> cam_state V -> Prop :=
   | nf_rel_lang_cam_add2 : forall C v1 v2, non_nat v2 ->
       nf_rel_lang_cam (C [e_add v1 v2]ᵢ) ⟨e_add v1 v2, C⟩ₑ
   | nf_rel_lang_cam_app : forall C v1 v2, non_lam v1 ->
-      nf_rel_lang_cam (C [e_app v1 v2]ᵢ) ⟨e_add v1 v2, C⟩ₑ
+      nf_rel_lang_cam (C [e_app v1 v2]ᵢ) ⟨e_app v1 v2, C⟩ₑ
   | nf_rel_lang_cam_do : forall C v l, ~IctxHandlesOp C l ->
       nf_rel_lang_cam (C[ e_do l v ]ᵢ) ⟨i_ctx_top, toₒ C, l, v⟩ₒ.
+
+Hint Constructors nf_rel_lang_cam : core.
+
+Lemma nf_rel_lang_cam_correct :
+  forall (V : Set) (e : expr V) (s : cam_state V),
+    nf_rel_lang_cam e s -> lang_nf e /\ cam_nf s.
+Proof.
+  intros. inv H; auto.
+Qed.

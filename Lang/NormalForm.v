@@ -22,6 +22,8 @@ Inductive lang_nf {V : Set} : expr V -> Prop :=
   | lang_nf_app : forall C v1 v2, non_lam v1      -> lang_nf (C[ e_app v1 v2 ]ᵢ)
   | lang_nf_do : forall C v l, ~IctxHandlesOp C l -> lang_nf (C[ e_do l v ]ᵢ).
 
+Hint Constructors lang_nf : core.
+
 Inductive predex {V : Set} : expr V -> Prop :=
   | predex_add : forall v1 v2, predex (e_add v1 v2)
   | predex_app : forall v1 v2, predex (e_app v1 v2)

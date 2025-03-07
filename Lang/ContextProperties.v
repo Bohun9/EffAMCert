@@ -268,6 +268,17 @@ Proof.
   simpl. reflexivity.
 Qed.
 
+Lemma add_oo_eq_add_i :
+  forall (V : Set) (C1 : i_ctx V) (C2 : o_ctx V),
+    (toₒ C1) ₒ+ₒ C2 = toₒ (C1 +ᵢ C2).
+Proof.
+  intros. unfold i_to_o.
+  rewrite add_o_add_oo_assoc. simpl.
+  rewrite <- add_o_add_oo_assoc2.
+  rewrite add_oo_hole_r.
+  reflexivity.
+Qed.
+
 (* ===================================================================================== *)
 (* Injection of plugs *)
 
@@ -365,6 +376,17 @@ Proof.
   intros. split; auto.
 Qed.
 
+Lemma i_ctx_handles_op_add_o_distr1 :
+  forall (V : Set) (C1 : i_ctx V) (C2 : o_ctx V) l,
+    OctxHandlesOp (C1 +ₒ C2) l -> IctxHandlesOp C1 l \/ OctxHandlesOp C2 l.
+Proof.
+  intros. generalize dependent C2. induction C1; intros.
+  - tauto.
+  - simpl. specialize (IHC1 _ H) as [? | ?]; auto.
+  - simpl. specialize (IHC1 _ H) as [? | ?]; auto.
+    simpl in H0. destruct H0; auto.
+Qed.
+
 Lemma o_ctx_handles_op_bijection :
   forall (V : Set) (C : o_ctx V) l,
     IctxHandlesOp (toᵢ C) l -> OctxHandlesOp C l.
@@ -385,3 +407,21 @@ Proof.
 Qed.
 
 Hint Resolve not_o_ctx_handles_op_bijection : core.
+
+Lemma i_ctx_handles_op_bijection :
+  forall (V : Set) (C : i_ctx V) l,
+    OctxHandlesOp (toₒ C) l -> IctxHandlesOp C l.
+Proof.
+  intros V C l. unfold i_to_o. intro.
+  apply i_ctx_handles_op_add_o_distr1 in H. destruct H.
+  - assumption.
+  - contradiction.
+Qed.
+
+Lemma not_i_ctx_handles_op_bijection :
+  forall (V : Set) (C : i_ctx V) l,
+    ~IctxHandlesOp C l -> ~OctxHandlesOp (toₒ C) l.
+Proof.
+  intros. intro. apply H.
+  apply i_ctx_handles_op_bijection. assumption.
+Qed.
