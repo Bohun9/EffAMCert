@@ -1,5 +1,10 @@
 Require Import Lang.Syntax.
 
+Lemma HandlesOp_dec :
+  forall {V : Set} (h : handler V) (l : string),
+    HandlesOp h l \/ ~HandlesOp h l.
+Admitted.
+
 (* ===================================================================================== *)
 (* Context addition definitions *)
 
@@ -138,6 +143,15 @@ Lemma i_plug_bijection :
 Proof.
   intros. unfold i_to_o.
   rewrite <- add_o_plug_assoc.
+  simpl. reflexivity.
+Qed.
+
+Lemma o_plug_bijection :
+  forall (V : Set) (C : o_ctx V) e,
+    C[e]ₒ = (toᵢ C) [e]ᵢ.
+Proof.
+  intros. unfold o_to_i.
+  rewrite add_i_plug_assoc.
   simpl. reflexivity.
 Qed.
 
@@ -369,3 +383,5 @@ Proof.
   intros. intro. apply H.
   apply o_ctx_handles_op_bijection. assumption.
 Qed.
+
+Hint Resolve not_o_ctx_handles_op_bijection : core.

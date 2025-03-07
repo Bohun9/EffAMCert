@@ -11,11 +11,6 @@ Inductive cam_nf {V : Set} : cam_state V -> Prop :=
   | cam_nf_app : forall C v1 v2, non_lam v1  -> cam_nf ⟨e_app v1 v2, C⟩ₑ
   | cam_nf_do : forall C l v, cam_nf ⟨i_ctx_top, C, l, v⟩ₒ.
 
-Lemma HandlesOp_dec :
-  forall {V : Set} (h : handler V) (l : string),
-    HandlesOp h l \/ ~HandlesOp h l.
-Admitted.
-
 Theorem cam_nf_correct :
   forall (V : Set) (s : cam_state V),
     cam_nf s <-> normal_form cam_red s.
