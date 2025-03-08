@@ -1,3 +1,4 @@
+Require Import General.Lemmas.
 Require Import CAM.Syntax.
 Require Import Lang.Semantics.
 Require Import Lang.ContextProperties.
@@ -76,13 +77,6 @@ Proof.
 Qed.
 
 Hint Resolve plug_expr_mode_cam_red : core.
-
-Lemma not_or_and : forall A B : Prop, ~(A \/ B) -> ~A /\ ~B.
-Proof.
-  intros. split.
-  - intros HA. apply H. left. assumption.
-  - intros HB. apply H. right. assumption.
-Qed.
 
 Lemma add_op_mode_cam_red_i :
   forall (V : Set) (C1 C2 : i_ctx V) (C' : o_ctx V) l v,

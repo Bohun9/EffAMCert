@@ -7,7 +7,7 @@ Require Import Lang.ContextProperties.
 Require Import Lang.NormalForm.
 Require Import Coq.Relations.Operators_Properties.
 Require Import Coq.Relations.Relation_Operators.
-Require Import Tactics.General.
+Require Import General.Tactics.
 
 Ltac simplIH :=
   match goal with

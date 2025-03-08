@@ -2,7 +2,8 @@ Require Import Lang.Syntax.
 Require Import Lang.Semantics.
 Require Import Lang.ShapeLemmas.
 Require Import Lang.ContextProperties.
-Require Import Tactics.General.
+Require Import General.Tactics.
+Require Import General.Lemmas.
 
 Definition normal_form {A : Set} (R : A -> A -> Prop) (a : A) :=
   ~exists a', R a a'.
@@ -109,12 +110,13 @@ Ltac inv_redex :=
       try discriminate HC'; injection HC' as ? ?; subst
   end.
 
-Lemma not_or_and :
-  forall (P Q : Prop),
-    ~(P \/ Q) -> ~P /\ ~Q.
-Proof.
-  tauto.
-Qed.
+Ltac Handles_contra :=
+  match goal with
+  | [ H1 : ~HandlesOp ?h ?l, H2 : HandlesOpWith ?h ?l ?e  |- _ ] =>
+      let H := fresh "H" in
+      assert (H : HandlesOp h l);
+      [ exists e; assumption | auto ]
+  end.
 
 Theorem lang_nf_correct :
   forall (V : Set) (e : expr V),

@@ -2,7 +2,7 @@ Require Import Lang.NormalForm.
 Require Import Lang.ContextProperties.
 Require Import CAM.Syntax.
 Require Import CAM.Semantics.
-Require Import Tactics.General.
+Require Import General.Tactics.
 
 Inductive cam_nf {V : Set} : cam_state V -> Prop :=
   | cam_nf_val (v : value V) : cam_nf ⟨v, i_ctx_top⟩ₑ

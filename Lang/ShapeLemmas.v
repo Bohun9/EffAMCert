@@ -1,7 +1,7 @@
 Require Import Lang.Syntax.
 Require Import Lang.Semantics.
 Require Import Lang.ContextProperties.
-Require Import Tactics.General.
+Require Import General.Tactics.
 Require Import Coq.Relations.Operators_Properties.
 Require Import Coq.Relations.Relation_Operators.
 
