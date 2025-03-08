@@ -9,5 +9,6 @@
 ./Lang/ShapeLemmas.v
 ./CAM/Syntax.v
 ./CAM/Semantics.v
+./CAM/Determinism.v
 ./CAM/NormalForm.v
 ./CAM/LangIffCAM.v
