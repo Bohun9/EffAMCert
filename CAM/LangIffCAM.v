@@ -4,10 +4,12 @@ Require Import CAM.NormalForm.
 Require Import Lang.ShapeLemmas.
 Require Import Lang.Semantics.
 Require Import Lang.ContextProperties.
+Require Import Lang.Determinism.
 Require Import Lang.NormalForm.
 Require Import Coq.Relations.Operators_Properties.
 Require Import Coq.Relations.Relation_Operators.
 Require Import General.Tactics.
+Require Import General.Lemmas.
 
 Ltac simplIH :=
   match goal with
@@ -217,16 +219,6 @@ Section diverges_coind.
   Qed.
 End diverges_coind.
 
-Theorem diverges_coind' : forall (A : Set) (E : A -> A -> Prop) (a : A),
-  diverges E a -> exists (R : A -> Prop),
-  R a /\ forall a, R a -> exists a', E a a' /\ R a'.
-Proof.
-  intros. exists (diverges E). intuition.
-  inversion H0; subst. exists a2. auto.
-Qed.
-
-Print diverges_coind.
-
 Definition ω := (v_lam (e_app (v_var VZ) (v_var VZ))) : value Empty_set.
 Definition Ω := e_app ω ω : expr Empty_set.
 
@@ -241,7 +233,51 @@ Proof.
   - reflexivity.
 Qed.
 
-Theorem lang_iff_cam_inf :
+Definition cam_diverges_rel {V : Set} (s : cam_state V) :=
+    (exists C e, s = ⟨e, C⟩ₑ /\ diverges red (C[e]ᵢ))
+    \/ (exists C1 C2 l v,
+         s = ⟨C1, C2, l, v⟩ₒ
+         /\ diverges red (C1[ C2 [e_do l v ]ₒ ]ᵢ)
+         /\ ~OctxHandlesOp C2 l).
+
+Hint Unfold cam_diverges_rel : core.
+
+Theorem lang_cam_diverges :
+  forall (V : Set) (e : expr V),
+    diverges red e -> diverges cam_red ⟨e, i_ctx_top⟩ₑ.
+Proof.
+  intros V e He.
+  apply diverges_coind with (R := cam_diverges_rel).
+  - intros s Hs. destruct Hs as [[C [e' [? ?]]] | [C1 [C2 [l [v [? [? ?]]]]]]]; subst.
+    + inversion H0. subst. destruct e'.
+      * apply plug_val_red in H as [[? [? [? ?]]] | [? [? [? ?]]]]; subst.
+        -- eauto 10.
+        -- eauto 10.
+      * apply plug_add_red in H as [? [? [? [? ?]]]]; subst. eauto 10.
+      * apply plug_app_red in H as [? [? ?]]; subst. eauto 10.
+      * eauto 10.
+      * eauto 12.
+      * eauto 10.
+    + inversion H0. subst. destruct C1.
+      * simpl in H. exfalso.
+        specialize (lang_nf_correct _ (C2 [e_do l v ]ₒ)) as Hnf.
+        apply Hnf; eauto.
+      * eauto 12.
+      * destruct (HandlesOp_dec h l) as [[? ?] | ?].
+        -- apply (plug_handle_do_red _ _ _ _ _ _ x _) in H; auto; subst.
+           eauto 12.
+        (* It should be automated. *)
+        -- eexists. split.
+           ++ eauto.
+           ++ right. eexists. eexists. eexists. eexists. split.
+              ** auto.
+              ** split.
+                 --- apply H0.
+                 --- simpl. apply not_and_or. auto.
+  - eauto 10.
+Qed.
+
+Theorem lang_iff_cam_diverges :
   forall (V : Set) (e : expr V),
     diverges red e <-> diverges cam_red ⟨e, i_ctx_top⟩ₑ.
 Abort.

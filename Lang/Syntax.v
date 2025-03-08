@@ -120,6 +120,8 @@ Fixpoint OctxHandlesOp {V : Set} (C : o_ctx V) (l : string) : Prop :=
   | o_ctx_handle C1 h => HandlesOp h l \/ OctxHandlesOp C1 l
   end.
 
+Hint Unfold OctxHandlesOp : core.
+
 Fixpoint IctxHandlesOp {V : Set} (C : i_ctx V) (l : string) : Prop :=
   match C with
   | i_ctx_top => False

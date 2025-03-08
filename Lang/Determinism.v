@@ -138,6 +138,20 @@ Proof.
   intros. canon_reasoning.
 Qed.
 
+Lemma plug_handle_do_red :
+  forall (V : Set) (C : i_ctx V) C' h l v e_op e,
+    C[ e_handle (C'[ e_do l v]ₒ) h ]ᵢ --> e ->
+    HandlesOpWith h l e_op ->
+    ~OctxHandlesOp C' l ->
+    e = C[ esubst (esubst e_op (vshift v))
+                  (v_lam (e_handle (o_ctx_shift C'[v_var VZ]ₒ) (hshift h))) ]ᵢ.
+Proof.
+  intros.
+  apply lang_deterministic with (e1 := C[ e_handle (C'[ e_do l v]ₒ) h ]ᵢ). split.
+  - assumption.
+  - apply red_context. apply red_handle_do; auto.
+Qed.
+
 Lemma value_is_nf :
   forall (V : Set) (v : value V) e,
     e_val v --> e -> False.

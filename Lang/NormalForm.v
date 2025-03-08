@@ -26,6 +26,17 @@ Inductive lang_nf {V : Set} : expr V -> Prop :=
 
 Hint Constructors lang_nf : core.
 
+Lemma lang_nf_do2 :
+  forall (V : Set) (C : o_ctx V) v l, ~OctxHandlesOp C l -> lang_nf (C[ e_do l v ]ₒ).
+Proof.
+  intros.
+  rewrite o_plug_bijection.
+  apply lang_nf_do.
+  apply not_o_ctx_handles_op_bijection. assumption.
+Qed.
+
+Hint Resolve lang_nf_do2 : core.
+
 Inductive predex {V : Set} : expr V -> Prop :=
   | predex_add : forall v1 v2, predex (e_add v1 v2)
   | predex_app : forall v1 v2, predex (e_app v1 v2)
