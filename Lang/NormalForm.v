@@ -2,6 +2,7 @@ Require Import Lang.Syntax.
 Require Import Lang.Semantics.
 Require Import Lang.ShapeLemmas.
 Require Import Lang.ContextProperties.
+Require Import Lang.Determinism.
 Require Import General.Tactics.
 Require Import General.Lemmas.
 
@@ -75,41 +76,6 @@ Proof.
     apply o_plug_bijection.
 Qed.
 
-Theorem canon_let : 
-  forall (V : Set) (C : i_ctx V) (v : value V) e,
-    C[ e_let v e ]ᵢ = i_ctx_let C e [ v ]ᵢ.
-Proof.
-  intros. simpl. reflexivity.
-Qed.
-
-Theorem canon_handle_ret : 
-  forall (V : Set) (C : i_ctx V) (v : value V) h,
-    C[ e_handle v h ]ᵢ = i_ctx_handle C h [ v ]ᵢ.
-Proof.
-  intros. simpl. reflexivity.
-Qed.
-
-Theorem canon_handle_op :
-  forall (V : Set) (C : i_ctx V) (C' : o_ctx V) h l v,
-    C[ e_handle (C' [e_do l v]ₒ) h ]ᵢ = (i_ctx_handle C h +ᵢ C') [ e_do l v ]ᵢ.
-Proof.
-  intros.
-  assert (H : C [e_handle (C' [e_do l v ]ₒ) h ]ᵢ =
-              i_ctx_handle C h [C' [e_do l v ]ₒ ]ᵢ).
-  { reflexivity. }
-  rewrite H. rewrite add_i_plug_assoc. reflexivity.
-Qed.
-
-Ltac inv_redex :=
-  match goal with
-  | [ Hr : ?r1 ~~> ?r2, HC : _ = _ [?r1]ᵢ |- _ ] =>
-      inv Hr; try rewrite canon_let in HC;
-      try rewrite canon_handle_ret in HC; try rewrite canon_handle_op in HC;
-      let HC' := fresh "HC'" in
-      apply plug_atomic_eq_plug_atomic_i in HC as [? HC']; auto;
-      try discriminate HC'; injection HC' as ? ?; subst
-  end.
-
 Ltac Handles_contra :=
   match goal with
   | [ H1 : ~HandlesOp ?h ?l, H2 : HandlesOpWith ?h ?l ?e  |- _ ] =>
@@ -123,14 +89,14 @@ Theorem lang_nf_correct :
     lang_nf e <-> normal_form red e.
 Proof.
   intros. split.
-  - intro H. inv H; intros [e Hstep];
-    apply red_decomposition in Hstep as [C' [r1 [r2 [Hv [He Hr]]]]]; subst.
-    + apply val_eq_plug in Hv as [HC Hv]. subst. inversion Hr.
-    + inv_redex. inv H0.
-    + inv_redex. inv H0.
-    + inv_redex. inv H0.
-    + inv_redex. apply not_i_ctx_handles_op_add_i_distr1 in H0 as [? ?].
-      simpl in H0. apply not_or_and in H0 as [? _]. Handles_contra.
+  - intro H. inv H; intros [e Hstep].
+    + eapply value_is_nf. apply Hstep.
+    + apply plug_add_red in Hstep as [? [? [? [? ?]]]]; subst. inv H0.
+    + apply plug_add_red in Hstep as [? [? [? [? ?]]]]; subst. inv H0.
+    + apply plug_app_red in Hstep as [? [? ?]]; subst. inv H0.
+    + apply plug_do_red in Hstep as [? [? [? [? [? [? ?]]]]]]; subst.
+      apply not_i_ctx_handles_op_add_i_distr1 in H0 as [? ?].
+      simpl in H. apply not_or_and in H as [? _]. Handles_contra.
   - intros Hnf. destruct (lang_decomposition_i e)
     as [[v ?] | [[C [p [? Hp]]] | [C [l [v [? ?]]]]]]; subst.
     + apply lang_nf_val.

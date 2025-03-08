@@ -85,20 +85,63 @@ Proof.
   repeat rewrite bijection_composition_o in H5. assumption.
 Qed.
 
+Ltac canon_reasoning :=
+  repeat match goal with
+  | [ H : _ --> _ |- _ ] => apply red_decomposition in H as [? [? [? [? [? ?]]]]]; subst
+  | [ H : _ ~~> _ |- _ ] => inv H; autorewrite with canon in *
+  | [ H : _[_]ᵢ = _[_]ᵢ |- _ ] => apply plug_atomic_eq_plug_atomic_i in H as [? ?]; auto; try discriminate
+  | [ H : _ = _ |- _ ] => inj H
+  | [ |- _ ] => eauto 10
+  end.
+
 Theorem lang_deterministic :
   forall (V : Set) (e1 e2 e3 : expr V),
     e1 --> e2 /\ e1 --> e3 -> e2 = e3.
 Proof.
   intros V e1 e2 e3 [Hstep2 Hstep3].
-  apply red_decomposition in Hstep2 as [C [r1 [r2 [He1 [He2 Hr]]]]]. subst.
-  apply red_decomposition in Hstep3 as [C' [r1' [r2' [He1' [He3 Hr']]]]]. subst.
-  inv Hr; inv Hr'; autorewrite with canon in *;
-  apply plug_atomic_eq_plug_atomic_i in He1' as [HC Ha]; auto;
-  try discriminate; injection Ha; try injection HC; intros; subst; clear Ha.
-  - reflexivity.
-  - reflexivity.
-  - reflexivity.
-  - reflexivity.
-  - pose (handle_do_deterministic_o  _ _ _ _ _ _ _ _ _ _ HC H0 H2 H H1) as Hdeter.
-    destruct Hdeter as [? [? [? ?]]]; subst. reflexivity.
+  canon_reasoning.
+  pose (handle_do_deterministic_o  _ _ _ _ _ _ _ _ _ _ H H3 H4 H0 H1) as Hdeter.
+  destruct Hdeter as [? [? [? ?]]]; subst. reflexivity.
+Qed.
+
+Lemma plug_add_red :
+  forall (V : Set) (C : i_ctx V) v1 v2 e,
+    C[ e_add v1 v2 ]ᵢ --> e ->
+    exists (n1 n2 : nat), v1 = n1 /\ v2 = n2 /\ e = C[ n1 + n2 ]ᵢ.
+Proof.
+  intros. canon_reasoning.
+Qed.
+
+Lemma plug_app_red :
+  forall (V : Set) (C : i_ctx V) v1 v2 e,
+    C[ e_app v1 v2 ]ᵢ --> e ->
+    exists e', v1 = v_lam e' /\ e = C[ esubst e' v2 ]ᵢ.
+Proof.
+  intros. canon_reasoning.
+Qed.
+
+Lemma plug_val_red :
+  forall (V : Set) (C : i_ctx V) (v : value V) e,
+    C[ v ]ᵢ --> e ->
+    (exists C' e2, C = i_ctx_let C' e2 /\ e = C'[ esubst e2 v ]ᵢ)
+    \/ (exists C' h, C = i_ctx_handle C' h /\ e = C'[ esubst (ret_clause h) v ]ᵢ).
+Proof.
+  intros. canon_reasoning.
+Qed.
+
+Lemma plug_do_red :
+  forall (V : Set) (C : i_ctx V) l v e,
+    C[ e_do l v ]ᵢ --> e ->
+    exists (C1 : i_ctx V) (C2 : o_ctx V) h e_op,
+    C = (i_ctx_handle C1 h) +ᵢ C2 /\ HandlesOpWith h l e_op /\ ~OctxHandlesOp C2 l.
+Proof.
+  intros. canon_reasoning.
+Qed.
+
+Lemma value_is_nf :
+  forall (V : Set) (v : value V) e,
+    e_val v --> e -> False.
+Proof.
+  intros. change (e_val v) with (i_ctx_top[ v ]ᵢ) in H.
+  canon_reasoning.
 Qed.
