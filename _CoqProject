@@ -1,8 +1,10 @@
 -R . Top
 ./General/Tactics.v
 ./General/Lemmas.v
+./General/Definitions.v
 ./Lang/Syntax.v
 ./Lang/Semantics.v
+./Lang/Tactics.v
 ./Lang/ContextProperties.v
 ./Lang/Determinism.v
 ./Lang/NormalForm.v

@@ -1,13 +1,12 @@
 Require Import Lang.Syntax.
 Require Import Lang.Semantics.
+Require Import Lang.Tactics.
 Require Import Lang.ShapeLemmas.
 Require Import Lang.ContextProperties.
 Require Import Lang.Determinism.
 Require Import General.Tactics.
 Require Import General.Lemmas.
-
-Definition normal_form {A : Set} (R : A -> A -> Prop) (a : A) :=
-  ~exists a', R a a'.
+Require Import General.Definitions.
 
 Inductive non_nat {V : Set} : value V -> Prop :=
   | non_nat_var (v : V) : non_nat (v_var v)
@@ -86,14 +85,6 @@ Proof.
   - right. right. exists (o_to_i C). exists l. exists v. split; auto.
     apply o_plug_bijection.
 Qed.
-
-Ltac Handles_contra :=
-  match goal with
-  | [ H1 : ~HandlesOp ?h ?l, H2 : HandlesOpWith ?h ?l ?e  |- _ ] =>
-      let H := fresh "H" in
-      assert (H : HandlesOp h l);
-      [ exists e; assumption | auto ]
-  end.
 
 Theorem lang_nf_correct :
   forall (V : Set) (e : expr V),

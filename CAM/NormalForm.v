@@ -3,6 +3,7 @@ Require Import Lang.ContextProperties.
 Require Import CAM.Syntax.
 Require Import CAM.Semantics.
 Require Import General.Tactics.
+Require Import General.Definitions.
 
 Inductive cam_nf {V : Set} : cam_state V -> Prop :=
   | cam_nf_val (v : value V) : cam_nf ⟨v, i_ctx_top⟩ₑ
@@ -18,15 +19,12 @@ Theorem cam_nf_correct :
     cam_nf s <-> normal_form cam_red s.
 Proof.
   intros. split.
-  (* cam_nf s -> normal_form cam_red s *)
   - intros H. inv H.
     + intros [s Hstep]. inv Hstep.
     + intros [s Hstep]. inv Hstep. inv H0.
     + intros [s Hstep]. inv Hstep. inv H0.
     + intros [s Hstep]. inv Hstep. inv H0.
     + intros [s Hstep]. inv Hstep.
-
-  (* normal_form cam_red s -> cam_nf s  *)
   - intros H. unfold normal_form in H. destruct s.
     + destruct e.
       * destruct C.

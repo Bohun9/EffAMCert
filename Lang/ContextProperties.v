@@ -7,7 +7,7 @@ Admitted.
 
 Lemma HandlesOpWith_deterministic :
   forall {V : Set} (h : handler V) (l : string) e e',
-    HandlesOpWith h l e /\ HandlesOpWith h l e' -> e = e'.
+    HandlesOpWith h l e -> HandlesOpWith h l e' -> e = e'.
 Admitted.
 
 (* ===================================================================================== *)

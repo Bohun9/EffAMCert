@@ -4,6 +4,7 @@ Require Import Lang.ContextProperties.
 Require Import Lang.ShapeLemmas.
 Require Import General.Tactics.
 Require Import General.Lemmas.
+Require Import General.Definitions.
 
 (* Canonical form is C[a], where a is atomic.
    It is useful, because we can reason about
@@ -50,7 +51,7 @@ Proof.
   intros V C1 C2 C1' C2' h h' l e_op e_op'. generalize dependent C2'. induction C2.
   - destruct C2'; simpl; intros.
     + inj H. intuition.
-      eapply HandlesOpWith_deterministic. eauto.
+      eapply HandlesOpWith_deterministic; eauto.
     + discriminate.
     + inj H. exfalso. apply H1. left. eexists. eauto.
   - destruct C2'; simpl; intros.
@@ -95,10 +96,9 @@ Ltac canon_reasoning :=
   end.
 
 Theorem lang_deterministic :
-  forall (V : Set) (e1 e2 e3 : expr V),
-    e1 --> e2 /\ e1 --> e3 -> e2 = e3.
+  forall (V : Set), deterministic (@red V).
 Proof.
-  intros V e1 e2 e3 [Hstep2 Hstep3].
+  intros V e1 e2 e3 Hstep2 Hstep3.
   canon_reasoning.
   pose (handle_do_deterministic_o  _ _ _ _ _ _ _ _ _ _ H H3 H4 H0 H1) as Hdeter.
   destruct Hdeter as [? [? [? ?]]]; subst. reflexivity.
@@ -147,8 +147,8 @@ Lemma plug_handle_do_red :
                   (v_lam (e_handle (o_ctx_shift C'[v_var VZ]ₒ) (hshift h))) ]ᵢ.
 Proof.
   intros.
-  apply lang_deterministic with (e1 := C[ e_handle (C'[ e_do l v]ₒ) h ]ᵢ). split.
-  - assumption.
+  eapply lang_deterministic.
+  - apply H.
   - apply red_context. apply red_handle_do; auto.
 Qed.
 
