@@ -16,3 +16,4 @@
 ./CAM/LangIffCAM.v
 ./CEK/Syntax.v
 ./CEK/Semantics.v
+./CEK/ContextProperties.v

@@ -1,37 +1,33 @@
 Require Import Lang.Syntax.
 Export Lang.Syntax.
 
-Inductive cek_value (V : Set) : Set :=
+Inductive cek_value : Type :=
   | cek_v_nat (n : nat)
-  | cek_v_lam (e : expr (inc V)) (Γ : V -> cek_value V)
-  | cek_v_cont (C : cek_i_ctx V) (* Not sure which context is better. *)
+  | cek_v_lam {V : Set} (e : expr (inc V)) (Γ : V -> cek_value)
+  | cek_v_cont (C : cek_o_ctx) (* Not sure which context is better. *)
 
-with cek_i_ctx (V : Set) : Set := 
+with cek_i_ctx : Type := 
   | cek_i_ctx_top
-  | cek_i_ctx_let (C : cek_i_ctx V) (e2 : expr (inc V)) (Γ : V -> cek_value V)
-  | cek_i_ctx_handle (C : cek_i_ctx V) (h : handler V) (Γ : V -> cek_value V)
+  | cek_i_ctx_let {V : Set}
+      (C : cek_i_ctx) (e2 : expr (inc V)) (Γ : V -> cek_value)
+  | cek_i_ctx_handle {V : Set}
+      (C : cek_i_ctx) (h : handler V) (Γ : V -> cek_value)
 
-with cek_o_ctx (V : Set) : Set := 
+with cek_o_ctx : Type := 
   | cek_o_ctx_hole
-  | cek_o_ctx_let (C : cek_o_ctx V) (e2 : expr (inc V)) (Γ : V -> cek_value V)
-  | cek_o_ctx_handle (C : cek_o_ctx V) (h : handler V) (Γ : V -> cek_value V).
-
-Arguments cek_v_nat {V}.
-Arguments cek_v_lam {V}.
-Arguments cek_v_cont {V}.
+  | cek_o_ctx_let {V : Set}
+      (C : cek_o_ctx) (e2 : expr (inc V)) (Γ : V -> cek_value)
+  | cek_o_ctx_handle {V : Set}
+      (C : cek_o_ctx) (h : handler V) (Γ : V -> cek_value).
 
 Coercion cek_v_nat : nat >-> cek_value.
 
-Definition env (V : Set) := V -> cek_value V.
+Definition env (V : Set) := V -> cek_value.
 
-Inductive cek_state (V : Set) : Set :=
-  | cek_expr_mode (e : expr V) (Γ : env V) (C : cek_i_ctx V)
-  | cek_op_mode (C : cek_i_ctx V) (C' : cek_o_ctx V) (l : string) (w : cek_value V)
-  | cek_cont_mode (C : cek_i_ctx V) (w : cek_value V).
-
-Arguments cek_expr_mode {V}.
-Arguments cek_op_mode {V}.
-Arguments cek_cont_mode {V}.
+Inductive cek_state : Type :=
+  | cek_expr_mode {V : Set} (e : expr V) (Γ : env V) (C : cek_i_ctx)
+  | cek_op_mode (C : cek_i_ctx) (C' : cek_o_ctx) (l : string) (w : cek_value)
+  | cek_cont_mode (C : cek_i_ctx) (w : cek_value).
 
 (* Disambiguate machine notations via a unique superscript letter (ᵉ for CEK). *)
 
