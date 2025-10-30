@@ -5,7 +5,7 @@ Require Import Coq.Relations.Relation_Operators.
 Definition normal_form {A : Set} (R : A -> A -> Prop) (a : A) :=
   ~exists a', R a a'.
 
-Definition deterministic {A : Set} (R : A -> A -> Prop) :=
+Definition deterministic {A : Type} (R : A -> A -> Prop) :=
   forall (a1 a2 a3 : A), R a1 a2 -> R a1 a3 -> a2 = a3.
 
 CoInductive diverges {A : Set} (E : A -> A -> Prop) : A -> Prop :=

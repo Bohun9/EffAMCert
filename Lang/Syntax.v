@@ -129,6 +129,16 @@ Fixpoint IctxHandlesOp {V : Set} (C : i_ctx V) (l : string) : Prop :=
   | i_ctx_handle C1 h => HandlesOp h l \/ IctxHandlesOp C1 l
   end.
 
+Lemma HandlesOp_dec :
+  forall {V : Set} (h : handler V) (l : string),
+    HandlesOp h l \/ ~HandlesOp h l.
+Admitted.
+
+Lemma HandlesOpWith_deterministic :
+  forall {V : Set} (h : handler V) (l : string) e e',
+    HandlesOpWith h l e -> HandlesOpWith h l e' -> e = e'.
+Admitted.
+
 (* ========================================================================= *)
 (* Mapping, i.e., variable renaming *)
 

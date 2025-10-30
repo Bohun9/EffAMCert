@@ -1,15 +1,5 @@
 Require Import Lang.Syntax.
 
-Lemma HandlesOp_dec :
-  forall {V : Set} (h : handler V) (l : string),
-    HandlesOp h l \/ ~HandlesOp h l.
-Admitted.
-
-Lemma HandlesOpWith_deterministic :
-  forall {V : Set} (h : handler V) (l : string) e e',
-    HandlesOpWith h l e -> HandlesOpWith h l e' -> e = e'.
-Admitted.
-
 (* ===================================================================================== *)
 (* Context addition definitions *)
 
