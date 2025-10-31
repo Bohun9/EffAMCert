@@ -41,3 +41,5 @@ Definition value_to_cek_value {V : Set} (v : value V) (Γ : env V) : cek_value :
 Notation "'ᵉ⟨' e ',' Γ ',' C '⟩ₑ'" := (cek_expr_mode e Γ C) (at level 0).
 Notation "'ᵉ⟨' C ',' C' ',' l ',' w '⟩ₒ'" := (cek_op_mode C C' l w) (at level 0).
 Notation "'ᵉ⟨' C ',' w '⟩ᶜ'" := (cek_cont_mode C w) (at level 0).
+
+Notation "∅" := Empty_set.
