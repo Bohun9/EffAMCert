@@ -29,6 +29,13 @@ Inductive cek_state : Type :=
   | cek_op_mode (C : cek_i_ctx) (C' : cek_o_ctx) (l : string) (w : cek_value)
   | cek_cont_mode (C : cek_i_ctx) (w : cek_value).
 
+Definition value_to_cek_value {V : Set} (v : value V) (Γ : env V) : cek_value :=
+  match v with
+  | v_nat n => cek_v_nat n
+  | v_var x => Γ x
+  | v_lam e => cek_v_lam e Γ
+  end.
+
 (* Disambiguate machine notations via a unique superscript letter (ᵉ for CEK). *)
 
 Notation "'ᵉ⟨' e ',' Γ ',' C '⟩ₑ'" := (cek_expr_mode e Γ C) (at level 0).

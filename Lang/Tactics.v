@@ -1,4 +1,6 @@
 Require Import Lang.Syntax.
+Require Import General.Tactics.
+Export General.Tactics.
 
 Ltac Handles_contra :=
   match goal with

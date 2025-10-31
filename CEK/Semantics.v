@@ -1,13 +1,6 @@
 Require Import CEK.Syntax.
 Require Import CEK.ContextProperties.
 
-Definition value_to_cek_value {V : Set} (v : value V) (Γ : env V) : cek_value :=
-  match v with
-  | v_nat n => cek_v_nat n
-  | v_var x => Γ x
-  | v_lam e => cek_v_lam e Γ
-  end.
-
 Reserved Notation "s '==>ₑ' s'" (at level 40).
 
 Inductive cek_red : cek_state -> cek_state -> Prop := 
@@ -24,7 +17,7 @@ Inductive cek_red : cek_state -> cek_state -> Prop :=
       ᵉ⟨e_app v1 v2, Γ, C⟩ₑ ==>ₑ
       ᵉ⟨e, Γ'[↦ value_to_cek_value v2 Γ], C⟩ₑ
   | cek_red_app2
-      (V V' : Set) (v1 v2 : value V) (e : expr (inc V'))
+      (V : Set) (v1 v2 : value V)
       (Γ : env V) (C : cek_i_ctx) (C' : cek_o_ctx) :
       value_to_cek_value v1 Γ = cek_v_cont C' ->
       ᵉ⟨e_app v1 v2, Γ, C⟩ₑ ==>ₑ
@@ -37,16 +30,20 @@ Inductive cek_red : cek_state -> cek_state -> Prop :=
       (V : Set) (e : expr V) (h : handler V) (Γ : env V) (C : cek_i_ctx) :
       ᵉ⟨e_handle e h, Γ, C⟩ₑ ==>ₑ
       ᵉ⟨e, Γ, cek_i_ctx_handle C h Γ⟩ₑ
-  | cek_red_ret_let 
-      (V V' : Set) (v : value V) (e : expr (inc V'))
-      (Γ : env V) (Γ' : env V') (C : cek_i_ctx) :
-      ᵉ⟨v, Γ, cek_i_ctx_let C e Γ'⟩ₑ ==>ₑ
-      ᵉ⟨e, Γ'[↦ value_to_cek_value v Γ], C⟩ₑ
-  | cek_red_ret_handle 
-      (V V' : Set) (v : value V) (h : handler V')
-      (Γ : env V) (Γ' : env V') (C : cek_i_ctx) :
-      ᵉ⟨v, Γ, cek_i_ctx_handle C h Γ'⟩ₑ ==>ₑ
-      ᵉ⟨ret_clause h, Γ'[↦ value_to_cek_value v Γ], C⟩ₑ
+  | cek_red_ret
+      (V : Set) (v : value V) (Γ : env V) (C : cek_i_ctx) :
+      ᵉ⟨v, Γ, C⟩ₑ ==>ₑ
+      ᵉ⟨C, value_to_cek_value v Γ⟩ᶜ
+  | cek_red_cont_let 
+      (V : Set) (w : cek_value) (e : expr (inc V))
+      (Γ : env V) (C : cek_i_ctx) :
+      ᵉ⟨cek_i_ctx_let C e Γ, w⟩ᶜ ==>ₑ
+      ᵉ⟨e, Γ[↦ w], C⟩ₑ
+  | cek_red_cont_handle 
+      (V : Set) (w : cek_value) (h : handler V)
+      (Γ : env V) (C : cek_i_ctx) :
+      ᵉ⟨cek_i_ctx_handle C h Γ, w⟩ᶜ ==>ₑ
+      ᵉ⟨ret_clause h, Γ[↦ w], C⟩ₑ
   | cek_red_do
       (V : Set) (l : string) (v : value V) (Γ : env V) (C : cek_i_ctx) :
       ᵉ⟨e_do l v, Γ, C⟩ₑ ==>ₑ

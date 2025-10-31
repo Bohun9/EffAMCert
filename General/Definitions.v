@@ -2,7 +2,7 @@ Require Import General.Tactics.
 Require Import Coq.Relations.Operators_Properties.
 Require Import Coq.Relations.Relation_Operators.
 
-Definition normal_form {A : Set} (R : A -> A -> Prop) (a : A) :=
+Definition normal_form {A : Type} (R : A -> A -> Prop) (a : A) :=
   ~exists a', R a a'.
 
 Definition deterministic {A : Type} (R : A -> A -> Prop) :=

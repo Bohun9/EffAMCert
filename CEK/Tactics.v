@@ -4,7 +4,7 @@ Require Import Lang.Tactics.
 Export Lang.Tactics.
 
 Ltac destruct_existT :=
-  match goal with
+  repeat match goal with
   | [ H : existT _ _ _ = existT _ _ _ |- _ ] =>
       dependent destruction H
   end.
